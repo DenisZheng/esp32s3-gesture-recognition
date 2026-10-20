@@ -2,7 +2,7 @@
 
 本仓库独立管理 **ESPDet-Pico + HaGRIDv2 -> 自主训练 -> ONNX -> ESP-PPQ -> ESP-DL -> M5Stack CoreS3** 的研究 PoC。
 
-**当前阶段：P0 BLOCKED**：本地代码与技术文档已准备，但 GitHub Private 远端仓库、GitHub Actions 实际运行与 main 保护尚未完成，不能算 GitHub 初始化成功；也没有训练、量化或板卡验收证据。
+**当前阶段：P0 PARTIAL**：代码与技术文档已推送到 GitHub Public 仓库，基础 GitHub Actions 检查已通过；main 分支保护仍待确认。没有训练、量化或真实板卡验收证据。
 
 本项目的**应用目标是手势识别**，采用**一个 ESPDet-Pico 目标检测网络**同时预测手部 Bounding Box、置信度和下列十类（不是检测+分类两个模型）：`one, two, three, four, five, like, ok, no_gesture, call, dislike`。`no_gesture` 是有手部检测框的非命令手势，`no_hand` 不是第十一类。
 

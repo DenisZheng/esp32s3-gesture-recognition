@@ -1,0 +1,9 @@
+{
+  "note": "EXAMPLE ONLY; exact custom PDF MUST be read first. Keep signed record local, not in public Git.",
+  "reviewer": "",
+  "reviewed_on": "",
+  "license_pdf_sha256": "",
+  "permitted_scope": "unverified",
+  "accept_terms": false,
+  "license_reference": "https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/license/en_us.pdf"
+}

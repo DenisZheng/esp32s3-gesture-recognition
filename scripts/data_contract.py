@@ -36,7 +36,7 @@ def xywh_to_yolo(xywh: Iterable[float]) -> tuple[float, float, float, float]:
     `united_bbox` grouping multiple hands here.
     """
     box = tuple(xywh)
-    if len(box) != 4 or any(not isinstance(v, (int, float)) for v in box):
+    if len(box) != 4 or any(type(v) not in (int, float) for v in box):
         raise AnnotationError("Box must contain four numeric normalized coordinates")
     x, y, w, h = map(float, box)
     if not all(map(math.isfinite, (x, y, w, h))):

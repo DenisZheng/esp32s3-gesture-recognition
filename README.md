@@ -2,9 +2,9 @@
 
 **Research PoC | Single-model ten-class hand gesture recognition with localization | M5Stack CoreS3**
 
-> **Project status: P0 PARTIAL (repository published, initial GitHub Actions checks PASS; main branch protection remains unverified).** The repository contains audited technical design, source pins, data-policy safeguards, offline contract tests, and CI configuration. It **does not** contain a trained model, data, a firmware image, or real-device results.
+> **Project status: GitHub P0 infrastructure COMPLETE (public repo, Actions PASS, active protected main); P0 class/license evidence still pending. P1 metadata tooling is synthetic-tested; real-data P1 remains BLOCKED by license/visual approval.** The repository contains audited technical design, source pins, data-policy safeguards, offline contract tests, and CI configuration. It **does not** contain a trained model, data, a firmware image, or real-device results.
 
-[中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Input size decision](docs/INPUT_RESOLUTION.md) | [Licenses](docs/THIRD_PARTY.md)
+[中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Input size decision](docs/INPUT_RESOLUTION.md) | [Licenses](docs/THIRD_PARTY.md) | [P1 data tooling](docs/P1_DATA_TOOLING.md)
 
 ## Scope
 
@@ -52,7 +52,7 @@ python3 -m unittest discover -s tests -v
 
 CI performs the same **offline** P0 checks on pushes and PRs. CI is **not** evidence of model accuracy, quantization parity, device boot, or camera inference. Do not interpret a green CI badge as successful deployment.
 
-When the repository exists on GitHub, create feature branches and PRs against protected `main`. See [GitHub setup](docs/GITHUB_SETUP.md) for the one-time repository and ruleset steps. Upstream repositories are referenced and pinned in [upstreams.lock.json](upstreams.lock.json), **not vendored or copied**.
+GitHub repo and `Protect main` ruleset are active; use feature branches and PRs (mandatory `p0-contract` job). See [GitHub setup](docs/GITHUB_SETUP.md). For synthetic-tested P1 data tooling see [P1_DATA_TOOLING](docs/P1_DATA_TOOLING.md). Upstream repositories are referenced and pinned in [upstreams.lock.json](upstreams.lock.json), **not vendored or copied**.
 
 ## Non-goals and release policy
 
@@ -66,8 +66,8 @@ When the repository exists on GitHub, create feature branches and PRs against pr
 
 | Stage | Goal | Current status |
 |---|---|---|
-| P0 | Repository, compatibility audit, plan, CI | **BLOCKED**: remote repo + CI + branch ruleset; documents and local validation implemented |
-| P1 | Audited HaGRID sample conversion | PENDING |
+| P0 | Repository, compatibility audit, plan, CI | GitHub/CI/ruleset **DONE**; license review and mapping visual signoff pending |
+| P1 | Audited HaGRID sample conversion | **PARTIAL**: offline metadata/converter scripts + synthetic CI; real licensed data and mapping pending |
 | P2 | Reproducible scratch training / FP32 eval | PENDING |
 | P3 | ONNX parity / W8A8 ESP-PPQ eval | PENDING |
 | P4 | CoreS3 fixed image + live camera | PENDING |

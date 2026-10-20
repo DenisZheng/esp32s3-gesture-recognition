@@ -2,29 +2,29 @@
 
 Date: 2026-10-20. **Goal: single-model hand gesture recognition with localization.** Project: `DenisZheng/esp32s3-gesture-recognition`. Baseline: CoreS3 / ESP32-S3 / 8MB PSRAM / IDF 5.4.4 / ESP-DL v3.3.14. Stage gate is sequential: do not enter the next phase until the previous stage has a signed, evidence-backed PASS. An outcome is `DONE` only with artifact, command, version and result. `PENDING` is neither PASS nor FAIL.
 
-**Current P0 outcome: BLOCKED.** Local project files and offline tests are supplied. A new Private GitHub repo cannot be created by the available GitHub connector (no `create_repo` method) or this runtime (`gh` is absent), so remote commit, main protection, PR and real GitHub Actions are not established. The local Git SHA is **not** a GitHub commit. HaGRID custom-license review, ten-class end-to-end model run, and map visual signoff are not claimed as completed.
+**Current P0 outcome: GITHUB INFRASTRUCTURE DONE; RESEARCH GATE PARTIAL.** Public repository, real GitHub commits, green Actions and active main Ruleset `Protect main` (PR + `p0-contract`) were verified via GitHub API on 2026-10-20. The owner's Public-visibility choice supersedes the original Private-repo suggestion. HaGRID custom-license PDF, class visual signoff and real samples are still pending. P1 metadata/converter tooling can proceed independently without datasets; P2 training cannot begin until licensed P1 acceptance.
 
 ## P0 — Repository and feasibility (current)
 
 | ID | Task | Exit evidence | Status |
 |---|---|---|---|
-| P0-01 | Create an empty **Private** GitHub repo, description fixed, no fork | `get_repo` returns `visibility=private`, owner and URL | BLOCKED |
+| P0-01 | Create the owner's **Public** independent GitHub repo, no fork | GitHub API repository metadata: public, owned by DenisZheng | DONE |
 | P0-02 | Verify upstream commits, v3.3.14 ESP-DL, IDF v5.4.4, ESP-PPQ, HaGRID | `upstreams.lock.json` full SHA and source links | DONE (source metadata only) |
 | P0-03 | Validate `ESPDetect(nc=10)` structural interface and six raw outputs | Read `esp_head.py`, model YAML, export script | DONE (source audit); runtime test PENDING |
 | P0-04 | Inspect ESP-DL NMS and multi-hand behavior | Read pinned C++ sources, document class-agnostic NMS | DONE (static audit); runtime test PENDING |
 | P0-05 | Audit upstream single-class assumptions | Quant validator `NC=1`, cat-only templates, device labeling | DONE (static audit) |
 | P0-06 | Define 10 exact classes + ignored other-gesture policy + leakage contract | Class JSON, data policy and unit tests | DONE (contract); actual HaGRID audit PENDING |
-| P0-07 | Design repo / evidence / gitignore / CI | Source tree, workflow, PR template, local tests | DONE locally; remote CI PENDING |
+| P0-07 | Design repo / evidence / gitignore / CI | Source tree, workflow, PR template; GitHub Actions passing | DONE |
 | P0-08 | Source/license inventory | `THIRD_PARTY.md` preliminary inventory | DONE (inventory); license clearance BLOCKED |
-| P0-09 | Initial remote commit, review flow and protected `main` | SHA, successful Actions run, active ruleset | BLOCKED |
+| P0-09 | Initial remote commits, review flow and protected `main` | GitHub SHA, successful Actions, ruleset id 25458714 Active; PR, CI, linear history | DONE |
 | P0-10 | Resolve gesture reference shapes `two_up/two`, `palm/five` | Comparison sheet with official gesture figure and independent samples | PENDING (before P1 conversion signoff) |
 | P0-11 | Correct application naming, choose single-model input resolution, update latest stable ESP-DL lock | [INPUT_RESOLUTION](INPUT_RESOLUTION.md), `README`, `upstreams.lock.json` | DONE (source/config review); hardware PENDING |
 
-**P0 exit requires:** Private remote verified, files on `main`, GitHub Actions P0 workflow completed green, main ruleset requiring PR + successful checks, class/version contract reviewed, and outstanding legal/data-usage risks explicitly accepted as research-only (not commercial clearance). Until then **P0 BLOCKED**, P1 work can be planned but not declared started.
+**P0 remaining exit gates:** Data license rights from actual custom PDF and visual confirmation of ten HaGRID-to-official classes. Public remote, main commits, green GitHub Actions and protected PR + mandatory check are **VERIFIED**. P1 **tooling** implementation uses synthetic tests only and does not constitute licensed data acceptance. Do not declare P0 fully PASS or enter P2 until the outstanding human evidence gates are signed.
 
 The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git SHA. Before upgrading again, file a compatibility-review PR against the updated upstream release. Training and image-shape selection remain experimental; [224x224 rationale](INPUT_RESOLUTION.md) is reviewed at P0, not yet validated on device.
 
-## P1 — HaGRIDv2 minimal dataset PoC (PENDING)
+## P1 — HaGRIDv2 minimal dataset PoC (TOOLING PARTIAL; real data BLOCKED)
 
 1. **P1-01 License/provenance:** read `license/en_us.pdf` and record permitted research/redistribution/model usage; keep private annotation and subject data; record HaGRIDv2 `Hagrid_v2-1M` source branch and annotation archive version/hash, never assume git SHA identifies downloaded dataset bytes.
 2. **P1-02 Counts/metadata:** download *annotation metadata only if access permits*; inspect split JSON schema, `user_id`, per-hand `bboxes` and `labels`, `united_bbox`/`united_label`. Make counts by source class, distinct user_id, multi-hand cases, `no_gesture`, unreadable media. Generate metadata-only manifest (local, ignored).
@@ -35,7 +35,7 @@ The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git 
 7. **P1-07 Validate:** each YOLO row exactly `cls cx cy w h`, normalized to [0,1], strictly positive box within image bounds, id 0-9; zero-line label only for truly audited hand-free images. Review random stratified annotated montages privately, manually sign off multiple hands, natural poses, occlusions and ignored other gestures.
 8. **P1-08 Manifest/evidence:** counts per split/class/subjects, duplicate-file SHA256 checks (within accessible subset), source license, sample selection method, conversion hash, rejects and QA log. Only share aggregate anonymized metrics.
 
-**P1 PASS:** ten-class mapping signed, testable converter, no user overlap and no unlabeled visible hands in audited sample; sample-level visual evidence reviewed locally; signed manifest contains source/version and valid licenses. No mAP required yet.
+**P1 tooling (PR):** `scripts/hagrid_p1.py`, `tests/test_hagrid_p1.py` and [P1 data runbook](P1_DATA_TOOLING.md) implement offline synthetic-tested metadata audit + guarded micro-sampling. No real HaGRID bytes were acquired. **P1 PASS remains blocked** by exact license PDF, signed visual mapping, real data and private visual QA. See runbook for restrictions and evidence. No mAP required yet.
 
 ## P2 — Scratch PyTorch training (PENDING)
 

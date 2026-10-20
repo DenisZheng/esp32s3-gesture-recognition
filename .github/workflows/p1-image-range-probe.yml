@@ -1,0 +1,43 @@
+name: P1 temporary image ZIP range compatibility probe
+
+on:
+  push:
+    branches: [feat/p1-image-range-probe]
+
+permissions:
+  contents: read
+
+jobs:
+  zip-metadata-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect source image ZIP metadata only (never download images)
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/hagrid/hagrid_dataset_new_554800/hagrid_dataset/two_up.zip"
+          echo "=== IMAGE ARCHIVE HEADERS ==="
+          curl -sSIL --max-time 30 --retry 1 "$URL" | grep -iE '^HTTP/|^content-length:|^accept-ranges:|^content-type:' || true
+          echo "=== BOUNDED ZIP TAIL (64KiB maximum) ==="
+          curl -fsSL --max-time 50 --range '-65536' --max-filesize 131072 \
+            -D /tmp/p1-probe-header -o /tmp/p1-zip-tail "$URL"
+          grep -iE '^HTTP/|^content-range:|^content-length:' /tmp/p1-probe-header
+          wc -c /tmp/p1-zip-tail
+          python - <<'PY'
+          import struct
+          from pathlib import Path
+          data=Path("/tmp/p1-zip-tail").read_bytes()
+          pos=data.rfind(b"PK\x05\x06")
+          if pos<0:
+              raise SystemExit("No regular ZIP end-directory record found")
+          sig,disk,cdisk,dcount,count,size,offset,comment=struct.unpack_from("<4s4H2IH",data,pos)
+          print(f"ZIP end-directory count={count}, directory-bytes={size}, offset={offset}, comment={comment}")
+          locator=data.rfind(b"PK\x06\x07",0,pos)
+          if locator>=0:
+              _,l_disk,l_offset,l_disks=struct.unpack_from("<4sIQI",data,locator)
+              print(f"ZIP64 locator present: yes, ZIP64_EOCD_offset={l_offset}, disk={l_disk}, total_disks={l_disks}")
+          else:
+              print("ZIP64 locator present: no")
+          print("No archive filenames or image data were output.")
+          PY

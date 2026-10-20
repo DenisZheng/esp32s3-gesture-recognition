@@ -221,6 +221,14 @@ def verify(output: Path, review: Path) -> dict:
     ):
         raise WorkflowError("Workspace provenance does not match P1 four-way review contract")
     try:
+        actual_manifest_hash = hashlib.sha256(
+            (workspace / "packet/packet.manifest.json").read_bytes()
+        ).hexdigest()
+    except OSError as exc:
+        raise WorkflowError("Missing private packet manifest") from exc
+    if data.get("packet_manifest_sha256") != actual_manifest_hash:
+        raise WorkflowError("Private packet manifest no longer matches workspace receipt")
+    try:
         report = verify_review(workspace / "packet", review)
     except VisualReviewError as exc:
         raise WorkflowError("Review cannot be matched to the private image packet") from exc

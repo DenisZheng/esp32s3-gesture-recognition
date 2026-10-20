@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "verified_utc_date": "2026-10-20",
+  "dependencies": [
+    {
+      "id": "esp-detection",
+      "url": "https://github.com/espressif/esp-detection.git",
+      "ref": "main",
+      "commit": "28de5902a357d99dd9a5db0f52905255641c5a78",
+      "license": "AGPL-3.0",
+      "usage": "upstream training architecture and export reference; not vendored"
+    },
+    {
+      "id": "esp-dl",
+      "url": "https://github.com/espressif/esp-dl.git",
+      "ref": "v3.3.13",
+      "commit": "6d3c4da1087d35916858dd0f9b3e9d6a85186e11",
+      "license": "MIT",
+      "usage": "embedded model interpreter and ESPDet postprocessor reference"
+    },
+    {
+      "id": "esp-ppq",
+      "url": "https://github.com/espressif/esp-ppq.git",
+      "ref": "master",
+      "commit": "e8881cb9ea5ba18d314fe84c9ca2ab23a27da6dd",
+      "license": "Apache-2.0",
+      "usage": "offline W8A8 symmetric power-of-two quantizer"
+    },
+    {
+      "id": "hagrid",
+      "url": "https://github.com/hukenovs/hagrid.git",
+      "ref": "Hagrid_v2-1M",
+      "commit": "cade4dd4ba162832ef2b62b92d89d4d7a2dc2b75",
+      "license": "custom variant CC BY-SA 4.0; verify license/en_us.pdf",
+      "usage": "annotation format and conversion code only; dataset bytes excluded"
+    },
+    {
+      "id": "esp-idf",
+      "url": "https://github.com/espressif/esp-idf.git",
+      "ref": "v5.4.4",
+      "commit": "296b6eab9445fd720e71aecab961e2d3fbca9944",
+      "license": "see ESP-IDF component manifests",
+      "usage": "device toolchain target"
+    }
+  ],
+  "training_python_packages": {
+    "status": "pending_smoke_lock",
+    "note": "Upstream requirements include lower-bounded ultralytics and git ESP-PPQ; no untested exact Python package lock is claimed as proven."
+  }
+}

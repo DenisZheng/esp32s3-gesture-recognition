@@ -1,0 +1,18 @@
+# Ultralytics-format 10-class detection dataset.
+# Data root is intentionally ignored by git; this config does not download it.
+path: data/processed/hagrid10
+train: images/train
+val: images/val
+test: images/test
+nc: 10
+names:
+  0: one
+  1: two
+  2: three
+  3: four
+  4: five
+  5: like
+  6: ok
+  7: no_gesture
+  8: call
+  9: dislike

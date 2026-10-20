@@ -1,0 +1,37 @@
+name: P0 offline guards
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**", "docs/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Bytecode sanity
+        run: python -m compileall -q scripts tests
+      - name: Validate source and class contracts
+        run: python scripts/check_contract.py
+      - name: Reject accidentally tracked data or weights
+        run: python scripts/check_repo_policy.py
+      - name: Run offline synthetic unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Summarize scope
+        run: echo 'P0 offline tests only; no data, training, quantization, or hardware acceptance.'

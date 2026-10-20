@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 from scripts.hagrid_p1 import OFFICIAL_LICENSE_SHA256
 from scripts.hagrid_image_zip64 import (
-    IMAGE_URLS, HTTPRange, ImageRangeError, extract, inspect, parse_image_index,
-    parse_zip64_footer, read_jpeg, _zip64_values
+    IMAGE_URLS, PINNED_INDEX_SHA256, PINNED_SIZES, HTTPRange, ImageRangeError,
+    extract, inspect, parse_image_index, parse_zip64_footer, read_jpeg, _zip64_values
 )
 
 
@@ -88,6 +88,26 @@ class ZIP64ParsingTests(unittest.TestCase):
     def setUp(self):
         self.raw, self.samples = tiny_zip64()
         self.transport = FakeTransport(self.raw)
+
+    def test_all_four_image_archives_have_immutable_index_metadata(self):
+        self.assertEqual(set(IMAGE_URLS), set(PINNED_SIZES))
+        self.assertEqual(set(IMAGE_URLS), set(PINNED_INDEX_SHA256))
+        self.assertEqual(len(IMAGE_URLS), 4)
+        self.assertEqual(PINNED_SIZES["two_up"], 42_733_450_409)
+        for source, digest in PINNED_INDEX_SHA256.items():
+            self.assertEqual(len(digest), 64)
+            self.assertTrue(all(ch in "0123456789abcdef" for ch in digest))
+            self.assertGreater(PINNED_SIZES[source], 40_000_000_000)
+
+    def test_modified_public_zip64_index_fails_immutable_baseline(self):
+        # Force the real HTTP transport type with synthetic archive bytes:
+        # the signature+ZIP structure is valid, but it is not the pinned
+        # official directory and must be rejected.
+        transport = HTTPRange.__new__(HTTPRange)
+        transport.size = len(self.raw)
+        transport.get = lambda start, end: self.transport.get(start, end)
+        with self.assertRaisesRegex(ImageRangeError, "index changed"):
+            inspect("two_up", transport)
 
     def test_fake_archive_has_real_zip64_record_and_offsets(self):
         self.assertIn(b"PK\x06\x06", self.raw)

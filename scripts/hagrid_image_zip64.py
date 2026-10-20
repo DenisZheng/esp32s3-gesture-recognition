@@ -30,10 +30,22 @@ IMAGE_URLS = {
              "hagrid_dataset/" + source + ".zip")
     for source in ("two_up", "peace", "peace_inverted", "two_up_inverted")
 }
-# This particular archive size was measured via HEAD and checked against
-# Content-Range in real GitHub Actions on 2026-10-20. Other source archives
-# are pinned by their fixed URL + per-session HTTP validators/CRC.
-PINNED_SIZES = {"two_up": 42_733_450_409}
+# All four archive sizes and SHA256 hashes of their ZIP64 central directories
+# were verified by index-only GitHub Actions on 2026-10-20. This pins the
+# original JPG names, member sizes/offsets and CRC32s without downloading
+# any photographs or 40+GB archives.
+PINNED_SIZES = {
+    "two_up": 42_733_450_409,
+    "peace": 43_368_944_020,
+    "peace_inverted": 41_355_311_911,
+    "two_up_inverted": 41_724_228_996,
+}
+PINNED_INDEX_SHA256 = {
+    "two_up": "c369829314b43099933239d7b8c07f89f5bb1bd9131dbf9092be3292fbe7327b",
+    "peace": "e0f44cfd7b293cecf8cb13579243fbf2481ace673255bb8af8d7c82db93d06c6",
+    "peace_inverted": "2a6f997649011932cb1fe7ce30993f1ca21963cf38e8bd408adcde5ae9fdfd69",
+    "two_up_inverted": "011fbeded458f8ef7031b23c4ef33c569bef0ed29899491e061b25de3bd92f6a",
+}
 MAX_ARCHIVE_BYTES = 80 * 1024 ** 3
 MAX_CENTRAL_BYTES = 8 * 1024 ** 2
 MAX_RANGE_BYTES = 24 * 1024 ** 2
@@ -294,6 +306,12 @@ def inspect(source: str, transport: HTTPRange | None = None):
     tail = transport.get(max(0, transport.size - TAIL_BYTES), transport.size - 1)
     offset, size, count = parse_zip64_footer(tail, transport.size)
     central = transport.get(offset, offset + size - 1)
+    index_digest = hashlib.sha256(central).hexdigest()
+    # An injected synthetic transport may have tiny fake ZIPs for unit tests.
+    # Real HTTP transport MUST match the previously verified official index.
+    if (isinstance(transport, HTTPRange)
+            and index_digest != PINNED_INDEX_SHA256[source]):
+        raise ImageRangeError("Official image ZIP64 index changed since verified baseline")
     entries = parse_image_index(central, count, source)
     return entries, {
         "status": "INDEX_ONLY_NO_PERSONAL_IMAGES_FETCHED",
@@ -302,7 +320,7 @@ def inspect(source: str, transport: HTTPRange | None = None):
         "zip64_entries": count,
         "jpeg_entries": len(entries),
         "central_directory_bytes": size,
-        "central_directory_sha256": hashlib.sha256(central).hexdigest(),
+        "central_directory_sha256": index_digest,
     }
 
 

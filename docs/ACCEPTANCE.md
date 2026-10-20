@@ -48,3 +48,6 @@ A local HTML contact sheet can support mapping signoff only when licensed real t
 ### P1-04 ZIP64 image acquisition evidence
 
 Index-only remote smoke tests establish that a 42.73 GB archive supports ranged metadata reads, but **do not prove real JPEG extraction or subject rights**. The local-only extractor must verify immutable/unchanged archive byte range, ZIP64 offset and filenames, CRC32, JPEG signature, SHA256 and research-license approval, and preserve its ignored manifest. A fully decoded/visually checked sample with reviewer decisions is required before P1 PASS. See [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md).
+
+
+**P1-04 metadata baseline update:** Four official source archives (two_up, peace, peace_inverted, two_up_inverted) now have verified byte sizes and central directory SHA256 pins in code, and full ZIP64 central index parsing succeeded in GitHub Actions without real image payloads. Authentic image extraction and licensed human labeling are still outstanding.

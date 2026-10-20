@@ -197,6 +197,12 @@ class VisualReviewPacketTests(unittest.TestCase):
         self.assertIn("peace_inverted", result["potential_command_alias_conflicts"])
         self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS")
 
+    def test_positive_mapping_needs_at_least_three_actual_photos(self):
+        self.packet(per_source=2)
+        review = self.sign()
+        with self.assertRaisesRegex(VisualReviewError, "At least three"):
+            verify_review(self.output, review)
+
     def test_unsigned_template_cannot_be_verified(self):
         self.packet()
         with self.assertRaises(VisualReviewError):
@@ -248,12 +254,15 @@ class VisualReviewPacketTests(unittest.TestCase):
             verify_review(self.output, path)
 
     def test_local_review_restricts_symlinks(self):
-        img = next((self.images / "two_up").glob("*.jpg"))
-        img.unlink()
-        img.symlink_to(self.license)
-        self.packet(("two_up",), per_source=3)
-        manifest = json.loads((self.output / "packet.manifest.json").read_text())
-        self.assertTrue(all(x["image"] != str(img) for x in manifest["samples"]))
+        folder = self.images / "two_up"
+        paths = list(folder.glob("*.jpg"))
+        for path in paths[1:]:
+            path.unlink()
+        paths[0].unlink()
+        paths[0].symlink_to(self.license)
+        with self.assertRaisesRegex(VisualReviewError, "No valid local train JPGs"):
+            self.packet(("two_up",), per_source=1)
+        self.assertFalse(self.output.exists())
 
 
 if __name__ == "__main__":

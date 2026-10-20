@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts.data_contract import CLASS_NAMES, SOURCE_TO_INDEX
-from scripts.hagrid_p1 import PreparationError, audit, convert, _check_sample
+from scripts.hagrid_p1 import PreparationError, audit, convert, _check_sample, OFFICIAL_LICENSE_SHA256
 
 
 class HaGRIDP1Tests(unittest.TestCase):
@@ -41,7 +41,7 @@ class HaGRIDP1Tests(unittest.TestCase):
                 self.by_split[(split, source)] = (stem, record)
         self.license.write_text(json.dumps({
             "reviewer": "synthetic only", "reviewed_on": "2026-10-20",
-            "license_pdf_sha256": hashlib.sha256(b"synthetic PDF not real").hexdigest(),
+            "license_pdf_sha256": OFFICIAL_LICENSE_SHA256,
             "permitted_scope": "research_only", "accept_terms": True,
         }), encoding="utf-8")
         self.mapping.write_text(json.dumps({
@@ -121,6 +121,13 @@ class HaGRIDP1Tests(unittest.TestCase):
         doc = json.loads(self.license.read_text())
         doc["reviewed_on"] = "2026-99-99"
         self.license.write_text(json.dumps(doc))
+        with self.assertRaises(PreparationError):
+            self._convert()
+
+    def test_incorrect_source_pdf_hash_is_rejected(self):
+        record = json.loads(self.license.read_text())
+        record["license_pdf_sha256"] = hashlib.sha256(b"wrong license").hexdigest()
+        self.license.write_text(json.dumps(record))
         with self.assertRaises(PreparationError):
             self._convert()
 

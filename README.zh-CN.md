@@ -2,7 +2,7 @@
 
 本仓库独立管理 **ESPDet-Pico + HaGRIDv2 -> 自主训练 -> ONNX -> ESP-PPQ -> ESP-DL -> M5Stack CoreS3** 的研究 PoC。
 
-**当前阶段：P0 GitHub 基础设施已完成**：Public 仓库、GitHub Actions 和 Active 的 `Protect main` 规则已核实。许可全文与十类视觉映射仍待人工确认。**P1 数据工具已通过合成单测，真实 HaGRID 数据处理暂受许可确认阻断。**没有训练、量化或真实板卡验收证据。
+**当前阶段：P0 GitHub 基础设施已完成**：Public 仓库、GitHub Actions 和 Active 的 `Protect main` 规则已核实。许可 PDF 全文已审阅并锁定 SHA256；实际使用许可确认与十类视觉映射仍待人工签核。**P1 数据工具已通过合成单测，真实 HaGRID 数据处理暂受许可确认阻断。**没有训练、量化或真实板卡验收证据。
 
 本项目的**应用目标是手势识别**，采用**一个 ESPDet-Pico 目标检测网络**同时预测手部 Bounding Box、置信度和下列十类（不是检测+分类两个模型）：`one, two, three, four, five, like, ok, no_gesture, call, dislike`。`no_gesture` 是有手部检测框的非命令手势，`no_hand` 不是第十一类。
 
@@ -26,3 +26,6 @@ python3 -m unittest discover -s tests -v
 
 
 P1 数据审计与微样本转换用法：[docs/P1_DATA_TOOLING.md](docs/P1_DATA_TOOLING.md)。需真实许可批准及全部十类人工映射签核，工具不会自动下载或使用 HaGRID 数据。
+
+
+HaGRIDv2 使用自行改写的许可，**不是标准 CC BY-SA 4.0**。详见 [完整许可审查记录](docs/HAGRID_LICENSE_AUDIT.md)。

@@ -1,20 +1,77 @@
 {
   "schema_version": 1,
   "num_classes": 10,
-  "input_hw": [224, 224],
+  "input_hw": [
+    224,
+    224
+  ],
   "classes": [
-    {"id": 0, "name": "one", "hagrid_source": "one", "review": "pending"},
-    {"id": 1, "name": "two", "hagrid_source": "two_up", "review": "pending_visual_confirmation"},
-    {"id": 2, "name": "three", "hagrid_source": "three", "review": "pending"},
-    {"id": 3, "name": "four", "hagrid_source": "four", "review": "pending"},
-    {"id": 4, "name": "five", "hagrid_source": "palm", "review": "pending_visual_confirmation"},
-    {"id": 5, "name": "like", "hagrid_source": "like", "review": "pending"},
-    {"id": 6, "name": "ok", "hagrid_source": "ok", "review": "pending"},
-    {"id": 7, "name": "no_gesture", "hagrid_source": "no_gesture", "review": "pending"},
-    {"id": 8, "name": "call", "hagrid_source": "call", "review": "pending"},
-    {"id": 9, "name": "dislike", "hagrid_source": "dislike", "review": "pending"}
+    {
+      "id": 0,
+      "name": "one",
+      "hagrid_source": "one",
+      "review": "pending"
+    },
+    {
+      "id": 1,
+      "name": "two",
+      "hagrid_source": "two_up",
+      "review": "pending_visual_confirmation"
+    },
+    {
+      "id": 2,
+      "name": "three",
+      "hagrid_source": "three",
+      "review": "pending"
+    },
+    {
+      "id": 3,
+      "name": "four",
+      "hagrid_source": "four",
+      "review": "pending"
+    },
+    {
+      "id": 4,
+      "name": "five",
+      "hagrid_source": "palm",
+      "review": "pending_visual_confirmation"
+    },
+    {
+      "id": 5,
+      "name": "like",
+      "hagrid_source": "like",
+      "review": "pending"
+    },
+    {
+      "id": 6,
+      "name": "ok",
+      "hagrid_source": "ok",
+      "review": "pending"
+    },
+    {
+      "id": 7,
+      "name": "no_gesture",
+      "hagrid_source": "no_gesture",
+      "review": "pending"
+    },
+    {
+      "id": 8,
+      "name": "call",
+      "hagrid_source": "call",
+      "review": "pending"
+    },
+    {
+      "id": 9,
+      "name": "dislike",
+      "hagrid_source": "dislike",
+      "review": "pending"
+    }
   ],
   "negative_background_label": "no_hand",
   "negative_background_is_detection_class": false,
-  "two_hand_joint_box_allowed": false
+  "two_hand_joint_box_allowed": false,
+  "model_architecture": "ESPDet-Pico",
+  "inference_model_count": 1,
+  "input_type": "whole_camera_frame",
+  "separate_mobile_net_classifier": false
 }

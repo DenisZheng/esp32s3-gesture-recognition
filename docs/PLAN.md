@@ -1,6 +1,6 @@
 # Master implementation plan and evidence ledger
 
-Date: 2026-10-20. Project: `DenisZheng/esp32s3-gesture-det`. Baseline: CoreS3 / ESP32-S3 / 8MB PSRAM / IDF 5.4.4 / ESP-DL v3.3.13. Stage gate is sequential: do not enter the next phase until the previous stage has a signed, evidence-backed PASS. An outcome is `DONE` only with artifact, command, version and result. `PENDING` is neither PASS nor FAIL.
+Date: 2026-10-20. **Goal: single-model hand gesture recognition with localization.** Project: `DenisZheng/esp32s3-gesture-recognition`. Baseline: CoreS3 / ESP32-S3 / 8MB PSRAM / IDF 5.4.4 / ESP-DL v3.3.14. Stage gate is sequential: do not enter the next phase until the previous stage has a signed, evidence-backed PASS. An outcome is `DONE` only with artifact, command, version and result. `PENDING` is neither PASS nor FAIL.
 
 **Current P0 outcome: BLOCKED.** Local project files and offline tests are supplied. A new Private GitHub repo cannot be created by the available GitHub connector (no `create_repo` method) or this runtime (`gh` is absent), so remote commit, main protection, PR and real GitHub Actions are not established. The local Git SHA is **not** a GitHub commit. HaGRID custom-license review, ten-class end-to-end model run, and map visual signoff are not claimed as completed.
 
@@ -9,7 +9,7 @@ Date: 2026-10-20. Project: `DenisZheng/esp32s3-gesture-det`. Baseline: CoreS3 / 
 | ID | Task | Exit evidence | Status |
 |---|---|---|---|
 | P0-01 | Create an empty **Private** GitHub repo, description fixed, no fork | `get_repo` returns `visibility=private`, owner and URL | BLOCKED |
-| P0-02 | Verify upstream commits, v3.3.13 ESP-DL, IDF v5.4.4, ESP-PPQ, HaGRID | `upstreams.lock.json` full SHA and source links | DONE (source metadata only) |
+| P0-02 | Verify upstream commits, v3.3.14 ESP-DL, IDF v5.4.4, ESP-PPQ, HaGRID | `upstreams.lock.json` full SHA and source links | DONE (source metadata only) |
 | P0-03 | Validate `ESPDetect(nc=10)` structural interface and six raw outputs | Read `esp_head.py`, model YAML, export script | DONE (source audit); runtime test PENDING |
 | P0-04 | Inspect ESP-DL NMS and multi-hand behavior | Read pinned C++ sources, document class-agnostic NMS | DONE (static audit); runtime test PENDING |
 | P0-05 | Audit upstream single-class assumptions | Quant validator `NC=1`, cat-only templates, device labeling | DONE (static audit) |
@@ -18,8 +18,11 @@ Date: 2026-10-20. Project: `DenisZheng/esp32s3-gesture-det`. Baseline: CoreS3 / 
 | P0-08 | Source/license inventory | `THIRD_PARTY.md` preliminary inventory | DONE (inventory); license clearance BLOCKED |
 | P0-09 | Initial remote commit, review flow and protected `main` | SHA, successful Actions run, active ruleset | BLOCKED |
 | P0-10 | Resolve gesture reference shapes `two_up/two`, `palm/five` | Comparison sheet with official gesture figure and independent samples | PENDING (before P1 conversion signoff) |
+| P0-11 | Correct application naming, choose single-model input resolution, update latest stable ESP-DL lock | [INPUT_RESOLUTION](INPUT_RESOLUTION.md), `README`, `upstreams.lock.json` | DONE (source/config review); hardware PENDING |
 
 **P0 exit requires:** Private remote verified, files on `main`, GitHub Actions P0 workflow completed green, main ruleset requiring PR + successful checks, class/version contract reviewed, and outstanding legal/data-usage risks explicitly accepted as research-only (not commercial clearance). Until then **P0 BLOCKED**, P1 work can be planned but not declared started.
+
+The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git SHA. Before upgrading again, file a compatibility-review PR against the updated upstream release. Training and image-shape selection remain experimental; [224x224 rationale](INPUT_RESOLUTION.md) is reviewed at P0, not yet validated on device.
 
 ## P1 — HaGRIDv2 minimal dataset PoC (PENDING)
 
@@ -57,7 +60,7 @@ Date: 2026-10-20. Project: `DenisZheng/esp32s3-gesture-det`. Baseline: CoreS3 / 
 
 ## P4 — Real CoreS3 (PENDING; real hardware mandatory)
 
-- **P4-01** Implement minimal IDF v5.4.4 app / M5Stack CoreS3 config (GC0308 sensor; BSP/esp_video pin after smoke test) with locked ESP-DL v3.3.13; camera and PSRAM initialization, image format, resolution/stride, rotation/mirror documented. App consumes generated `.espdl`, not official weights.
+- **P4-01** Implement minimal IDF v5.4.4 app / M5Stack CoreS3 config (GC0308 sensor; BSP/esp_video pin after smoke test) with locked ESP-DL v3.3.14; camera and PSRAM initialization, image format, resolution/stride, rotation/mirror documented. App consumes generated `.espdl`, not official weights.
 - **P4-02** Implement ten-name lookup and maximum box count; decode 3 stages, compare options for class-agnostic vs class-aware NMS (and one-class-per-hand arbitration). Test two hands same/different gestures and overlaps; preserve access to per-hand confidence.
 - **P4-03** Fixed-image parity FIRST, compare preprocessed tensor checksums and decoded boxes/labels/scores against PC, define tolerances for quantization and pixel coordinate rounding.
 - **P4-04** Real live camera stream, at least all 10 gestures, `no_hand`, idle natural postures, other gestures, two hands, overlapping hands, occlusion, multiple scales, lighting. Measure p50/p95 full pipeline latency, model-only latency, FPS, internal heap/PSRAM peak/free and 30-minute crash-free capture session; raw images stay private.

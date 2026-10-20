@@ -5,7 +5,7 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 | ID | Severity | Finding and evidence | Mitigation and owner stage | State |
 |---|---|---|---|---|
 | R01 | H | ESP-Detection quantized validation code hardcodes `NC=1` | P3 adapter must use 10, assert score channels and compare raw/decoded outputs | DONE static finding; validation PENDING |
-| R02 | H | ESP-DL v3.3.13 generic NMS is **category-agnostic** | P4 evaluate two overlapped different gestures; choose class-aware policy or one-hand arbitration; demonstrate no duplicates/suppression errors | DONE static finding; test PENDING |
+| R02 | H | ESP-DL v3.3.14 generic NMS is **category-agnostic** | P4 evaluate two overlapped different gestures; choose class-aware policy or one-hand arbitration; demonstrate no duplicates/suppression errors | DONE static finding; test PENDING |
 | R03 | H | HaGRID `united_bbox` may combine two hands; folder name not equivalent to labels for all hands | P1 use `bboxes` and per-hand `labels`; reject ambiguity and audit multi-hand | DONE static finding; actual data PENDING |
 | R04 | H | Non-target gestures ignored in training become unlabeled foreground; `no_gesture` undersampled | Map reviewed per-hand noncommands to `no_gesture` or reject; sample natural hand/other pose and nohand controls | PENDING |
 | R05 | H | User leakage train vs val/test after class filtering/relabelling | P1 disjoint `user_id`, duplicate media hashes, hold-out fixed before training | PENDING |
@@ -22,4 +22,5 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 | R16 | M | Off-target model-size/CPU claims inferred from single-class cat 126.2ms | Measure ten-class CoreS3 model; report net latency and end-to-end camera FPS | PENDING |
 | R17 | M | P1 source semantic mismatch `two_up->two` and `palm->five` | Before conversion signoff official gesture picture vs independent HaGRID samples | PENDING |
 | R18 | M | HaGRID git commit does not identify dataset image/annotation archives | Local SHA256 dataset manifests, clear dataset release and download URLs | PENDING |
+| R20 | M | Mistaking official 128x128 ROI classifier size for full-frame one-model input | Freeze 224x224 ESPDet-Pico baseline; only change size after multi-hand, small-hand recall and CoreS3 tests (see `INPUT_RESOLUTION.md`) | DONE architecture decision; P2/P4 performance PENDING |
 | R19 | H | CoreS3 GC0308 source camera interface and BSP/esp_video driver not built against IDF 5.4.4 | P4 pin tested BSP, validate capture/format byte order, shared I2C power/reset and PSRAM pressure | PENDING |

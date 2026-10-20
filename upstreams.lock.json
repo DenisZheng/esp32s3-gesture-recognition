@@ -13,8 +13,8 @@
     {
       "id": "esp-dl",
       "url": "https://github.com/espressif/esp-dl.git",
-      "ref": "v3.3.13",
-      "commit": "6d3c4da1087d35916858dd0f9b3e9d6a85186e11",
+      "ref": "v3.3.14",
+      "commit": "5acd1c9992af4afb0fa80c221a676982b11381b8",
       "license": "MIT",
       "usage": "embedded model interpreter and ESPDet postprocessor reference"
     },

@@ -1,5 +1,9 @@
 # Architecture and interface contracts
 
+## Product intent and input decision
+
+This is a **hand-gesture-recognition** project, not a hand-presence-only detector. The single ESPDet-Pico model shares a backbone and returns class logits alongside hand boxes; it does not run a MobileNetV2 hand classifier. [Why full-frame 224x224 rather than the official cropped-hand 128x128](INPUT_RESOLUTION.md).
+
 ## System boundary
 
 The PoC produces **one trainable object detector**. Its ten class logits express nine commands and a visible-hand rejection class (`no_gesture`); the tenth channel is NOT a second model. On no-hand frames, detector should return zero accepted boxes rather than an eleventh `no_hand` class. Firmware only performs image conversion, inference, postprocessing and optional temporal debouncing.
@@ -37,8 +41,8 @@ ESPDet-Pico YAML + nc=10 -> scratch PyTorch FP32                  letterbox 224x
 
 - ESP-Detection `cfg/models/espdet_pico.yaml` defaults `nc=1`; its `nn/modules/esp_head.py` inherits Ultralytics Detect and its `cv3` branch produces `nc` score channels. Thus graph-level multi-class is plausible, **not yet measured**.
 - ESP-Detection `deploy/export.py` explicitly exports 6 raw outputs; `deploy/quantize.py` can target `esp32s3`; `deploy/eval_quantized_model.py` has hard-coded `NC=1`, so do not use its output as a ten-class correctness certificate.
-- ESP-DL v3.3.13 `ESPDetPostProcessor::parse_stage` iterates score channels and records `category=c`, so **multi-class candidates are parsed**.
-- ESP-DL v3.3.13 `DetectPostprocessor::nms` compares IoU without comparing categories, i.e. **class-agnostic suppression**. This can intentionally arbitrate conflicting labels for one hand, but may suppress two overlapping hands with distinct gestures. Need controlled tests of same/different classes, adjacent versus occluded hands and score ties; optionally write a small, reviewed adapter overriding choice of NMS policy rather than patching upstream in-place.
+- ESP-DL v3.3.14 `ESPDetPostProcessor::parse_stage` iterates score channels and records `category=c`, so **multi-class candidates are parsed**.
+- ESP-DL v3.3.14 `DetectPostprocessor::nms` compares IoU without comparing categories, i.e. **class-agnostic suppression**. This can intentionally arbitrate conflicting labels for one hand, but may suppress two overlapping hands with distinct gestures. Need controlled tests of same/different classes, adjacent versus occluded hands and score ties; optionally write a small, reviewed adapter overriding choice of NMS policy rather than patching upstream in-place.
 - C++ default `m_top_k=10` in the ESPDet template caps reported detections; determine board perf/memory vs candidate count; do not assume 10 is adequate for every two-hand test when duplicates exist before NMS.
 - Upstream C++ template invokes RGB565 big-endian `ImagePreprocessor` (S3), enables letterbox pad=114, while upstream Python calibration `ToTensor()->Resize()` does not use letterbox. Align in P3 and build fixed-image pixel tensor parity.
 

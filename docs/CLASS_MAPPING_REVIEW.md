@@ -15,7 +15,7 @@ Canonical source of truth: `configs/classes.json`; generated/training YAML must 
 | 8 | call | call | PENDING | Compare official "call" orientation |
 | 9 | dislike | dislike | PENDING | Contrast thumb-down vs folded hand |
 
-Official reference: https://github.com/espressif/esp-dl/blob/v3.3.13/examples/hand_gesture_recognition/gestures.png
+Official reference: https://github.com/espressif/esp-dl/blob/v3.3.14/examples/hand_gesture_recognition/gestures.png
 
 HaGRID source: https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/images/gestures.png
 

@@ -21,6 +21,10 @@ def check() -> None:
     cfg = json.loads((ROOT / "configs/classes.json").read_text(encoding="utf-8"))
     assert cfg["num_classes"] == 10
     assert cfg["input_hw"] == [224, 224]
+    assert cfg["model_architecture"] == "ESPDet-Pico"
+    assert cfg["inference_model_count"] == 1
+    assert cfg["input_type"] == "whole_camera_frame"
+    assert cfg["separate_mobile_net_classifier"] is False
     assert [c["id"] for c in cfg["classes"]] == list(range(10))
     assert [c["name"] for c in cfg["classes"]] == NAMES
     assert [c["hagrid_source"] for c in cfg["classes"]] == SOURCES
@@ -43,7 +47,8 @@ def check() -> None:
     for dep in deps:
         assert re.fullmatch(r"[0-9a-f]{40}", dep["commit"]), dep["id"]
         assert dep["url"].startswith("https://github.com/") and dep["url"].endswith(".git")
-    assert next(d for d in deps if d["id"] == "esp-dl")["ref"] == "v3.3.13"
+    assert next(d for d in deps if d["id"] == "esp-dl")["ref"] == "v3.3.14"
+    assert next(d for d in deps if d["id"] == "esp-dl")["commit"] == "5acd1c9992af4afb0fa80c221a676982b11381b8"
     assert next(d for d in deps if d["id"] == "esp-idf")["ref"] == "v5.4.4"
     exp = json.loads((ROOT / "experiments/templates/experiment.json").read_text(encoding="utf-8"))
     assert exp["num_classes"] == 10

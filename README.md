@@ -1,14 +1,16 @@
-# ESP32-S3 Gesture Detection (ESPDet-Pico + HaGRID)
+# ESP32-S3 Hand Gesture Recognition (ESPDet-Pico + HaGRID)
 
-**Research PoC | 10-class, single-model hand localization and gesture recognition | M5Stack CoreS3**
+**Research PoC | Single-model ten-class hand gesture recognition with localization | M5Stack CoreS3**
 
 > **Project status: P0 BLOCKED (remote GitHub repository/CI not yet established).** This local repository contains audited technical design, source pins, data-policy safeguards, offline contract tests, and CI configuration. It **does not** contain a trained model, data, a firmware image, or real-device results.
 
-[中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Licenses](docs/THIRD_PARTY.md)
+[中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Input size decision](docs/INPUT_RESOLUTION.md) | [Licenses](docs/THIRD_PARTY.md)
 
 ## Scope
 
-One *self-trained* ESPDet-Pico detection network (not the Espressif two-model hand-detection + classification pipeline), at 224 x 224, with **10 outputs**: hand bounding box + gesture category + confidence. Target: **ESP32-S3**, 8 MB PSRAM, **ESP-IDF 5.4.4**, **ESP-DL v3.3.13**, and **ESP-PPQ W8A8 / symmetric power-of-two**.
+One *self-trained* ESPDet-Pico **gesture-recognition network built on a detection architecture** (not the Espressif two-model detection + classification pipeline), at **224 x 224**, with **10 gesture classes** and per-hand bounding boxes + confidences. Target: **ESP32-S3**, 8 MB PSRAM, **ESP-IDF 5.4.4**, **ESP-DL v3.3.14**, and **ESP-PPQ W8A8 / symmetric power-of-two**.
+
+**Why 224x224 instead of 128x128?** In the official two-model system, ESPDet-Pico first locates hands in full camera frames at **224x224**, and MobileNetV2 then classifies **already-cropped hands at 128x128**. Our single ESPDet-Pico sees the full frame and must both locate and identify gestures, so the **224x224 detector baseline** is the relevant starting point. Lower-resolution tests (160x160 / 192x192) may be evaluated later, but not quietly substituted for the P2 baseline. See [input-resolution decision](docs/INPUT_RESOLUTION.md).
 
 **Immutable class index contract:**
 
@@ -36,7 +38,7 @@ HaGRIDv2 (licensed images + per-hand annotations)
     -> one-input, six-output ONNX
     -> ESP-PPQ PTQ (esp32s3, W8A8, symmetric PoT)
     -> own .espdl artifact
-    -> ESP-DL v3.3.13 / IDF 5.4.4
+    -> ESP-DL v3.3.14 / IDF 5.4.4
     -> M5Stack CoreS3 fixed-image parity, THEN live camera
 ```
 

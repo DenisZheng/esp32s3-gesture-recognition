@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 def render(src: str) -> str:
-    new, count = re.subn(r"^nc:\s*1\s*(?:#.*)?$", "nc: 10 # ten gesture detection classes", src, count=1, flags=re.M)
+    new, count = re.subn(r"^nc:\s*1\s*(?:#.*)?$", "nc: 10 # ten hand gesture recognition classes", src, count=1, flags=re.M)
     if count != 1:
         raise ValueError("Expected exactly one original 'nc: 1' declaration")
     if "ESPDetect, [nc]" not in new:

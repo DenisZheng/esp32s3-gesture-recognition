@@ -15,8 +15,12 @@
 | P1 | 10-source mapping signed including `two_up/two` and `palm/five`; real small licensed sample YOLO conversion; 100% valid numeric labels; 0 cross-split `user_id` overlaps; per-hand completeness; negative and non-command samples audited; conversion reproducible | Empty/unknown hands or mixed `user_id` sets => FAIL; missing license/data access => BLOCKED |
 | P2 | Scratch training proves no initialized pretrained checkpoints; `best.pt` hash + full train config/environment/seed; train/val loss, mAP50, mAP50-95, recall, confusion, per-class and multi-hand analysis on held-out data | No actual training or test run => PENDING; false claims of model quality => FAIL |
 | P3 | ONNX checker, one input, six typed outputs, **10 score channels on all 3 strides**; FP32-vs-ONNX parity on fixed images; ESP-PPQ `esp32s3` W8A8 sym PoT; quantized class/box parity, mAP drop quantified, provenance SHA256 and full color/letterbox calibration parity | `.espdl` export alone = NOT PASS; `NC=1` = FAIL; unquantized model or non-S3 target = FAIL |
-| P4 | IDF 5.4.4 / ESP-DL v3.3.13 on **real CoreS3**; own `.espdl` SHA matches P3; first fixed-image numeric parity, then continuous live camera demonstration of all 10 classes, no-hand scenes, other gestures, 2 hands, overlap/occlusion; p50/p95 latency, FPS, memory and PSRAM observed; test log signed | Firmware compiles alone != device PASS; board unavailable = BLOCKED; official weights substituted = FAIL |
+| P4 | IDF 5.4.4 / ESP-DL v3.3.14 on **real CoreS3**; own `.espdl` SHA matches P3; first fixed-image numeric parity, then continuous live camera demonstration of all 10 classes, no-hand scenes, other gestures, 2 hands, overlap/occlusion; p50/p95 latency, FPS, memory and PSRAM observed; test log signed | Firmware compiles alone != device PASS; board unavailable = BLOCKED; official weights substituted = FAIL |
 | P5 | Apples-to-apples one-model vs official two-model camera comparison; quality/latency/memory/size and false triggers; risks/licensing next-step recommendation; reproducible report | Missing P4 evidence => BLOCKED |
+
+## Input-resolution contract
+
+P2/P3/P4 baseline: `ESPDet-Pico`, **single model**, `nc=10`, input **224x224x3** with whole-frame letterbox. **128x128 is the official ROI classifier size, not our one-model image size.** Resolution changes require a versioned training+export+calibration+firmware agreement and separate experiment evidence; see [INPUT_RESOLUTION.md](INPUT_RESOLUTION.md).
 
 ## Quantitative thresholds policy
 

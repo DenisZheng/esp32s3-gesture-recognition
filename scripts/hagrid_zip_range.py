@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import struct
 import tempfile
@@ -61,6 +62,8 @@ def get_range(start: int, end: int) -> bytes:
             if not match or tuple(map(int, match.groups())) != (start, end, ARCHIVE_BYTES):
                 raise PreparationError("Archive response does not match pinned size/range")
             data = response.read(size + 1)
+    except PreparationError:
+        raise  # Surface explicit HTTP 200/invalid-range failure.
     except (OSError, ValueError) as exc:
         raise PreparationError("HTTP Range transfer failed") from exc
     if len(data) != size:
@@ -177,6 +180,8 @@ def fetch_directory() -> dict[str, Member]:
 
 def extract(sources: tuple[str, ...], splits: tuple[str, ...], output: Path,
             license_ack: Path, max_transfer_mib: int) -> dict:
+    if os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true":
+        raise PreparationError("Real HaGRID annotation extraction is forbidden in CI")
     _approval(license_ack, "license")
     if not (1 <= max_transfer_mib <= 256):
         raise PreparationError("Invalid requested byte budget")
@@ -231,8 +236,8 @@ def main() -> None:
     a = p.parse_args()
     try:
         splits, sources = tuple(a.splits), tuple(a.sources)
-        selected = select_members(fetch_directory(), splits, sources)
         if a.mode == "inspect":
+            selected = select_members(fetch_directory(), splits, sources)
             result = {
                 "archive_bytes": ARCHIVE_BYTES,
                 "selected_json_files": len(selected),

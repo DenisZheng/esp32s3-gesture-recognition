@@ -38,3 +38,8 @@ Template log: `experiments/templates/experiment.json`. A CI run only validates c
 ## P1 hard-negative acceptance addendum
 
 Do **not** accept a data release based merely on a list of ten HaGRID source folders. The 24 other raw categories include command-lookalikes (e.g. `peace` / `stop`) and double-hand composites. A negative class-7 detection must have a **verified hand bbox** and a currently signed source-specific review; unknown or ambiguous hands must cause entire-image rejection. Source-policy digest in private signoff must match committed JSON. Legitimate hand-free `no_hand` samples must have evidence of zero visible hands. The official `two_up -> two` mapping is still provisional and must be adjudicated against licensed `peace` variants before final P1 PASS. These gates cannot be substituted by synthetic CI.
+
+
+### P1-03 licensed visual evidence
+
+A local HTML contact sheet can support mapping signoff only when licensed real train images, sufficient class/alias comparisons, verified per-hand boxes and human-reviewed signatures exist. The new `scripts/p1_visual_review.py` refuses test images, binds image integrity and produces pending evidence forms, but synthetic CI does not constitute semantic, legal, dataset or device PASS. See [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md).

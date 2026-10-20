@@ -31,3 +31,8 @@ The ESP-DL v3.3.14 official gesture illustration (Git blob `64c4e7c856780d50ecfe
 ## Explicit contrasts required for mapping signoff
 
 The programmatic visual signoff now requires the private reviewer to list the following **actually compared** source variants in `contrasts_reviewed` for the relevant output: `two_up` versus `peace, peace_inverted, two_up_inverted`; `palm` versus `stop, stop_inverted`; `three` versus `three2, three3, three_gun`; `one` versus `point, mute`. Simply copying the fields from the unsigned template **is not proof of visual review**. The fields are a completeness guard; P1 acceptance still requires human evidence.
+
+
+## Repeatable train-only evidence procedure
+
+[P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md) documents how to generate a private HTML contact sheet and bind explicit human match/mismatch/uncertain decisions to the actual source image hashes. The source tests are synthetic only; **actual HaGRIDv2 visual mapping signoff remains PENDING**. Do not train on `peace` as a negative until the numeral-two mapping is adjudicated.

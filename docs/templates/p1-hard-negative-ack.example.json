@@ -1,0 +1,16 @@
+{
+  "note": "UNSIGNED INVALID TEMPLATE. Requires real licensed per-hand visual review. Keep completed record private under ignored data/reviews.",
+  "reviewer": "",
+  "reviewed_on": "",
+  "policy_sha256": "",
+  "approved_sources": [
+    {
+      "source": "fist",
+      "output": "no_gesture",
+      "approved": false,
+      "samples_reviewed": 0,
+      "licensed_images_reviewed": false,
+      "per_hand_boxes_reviewed": false
+    }
+  ]
+}

@@ -391,6 +391,7 @@ def verify_review(packet: Path, review: Path) -> dict:
         raise VisualReviewError("Review must include exactly the packet's source categories")
     seen = set()
     unresolved = []
+    alias_conflicts = []
     for decision in decisions:
         if not isinstance(decision, dict):
             raise VisualReviewError("Malformed review decision row")
@@ -408,6 +409,7 @@ def verify_review(packet: Path, review: Path) -> dict:
         packet_ids = decision.get("reviewed_packet_ids")
         if (
             not isinstance(packet_ids, list) or len(packet_ids) == 0
+            or not all(isinstance(sample_id, str) for sample_id in packet_ids)
             or len(packet_ids) != len(set(packet_ids))
             or not set(packet_ids) <= set(by_source[source])
         ):
@@ -419,8 +421,13 @@ def verify_review(packet: Path, review: Path) -> dict:
         note = decision.get("comparative_notes")
         if not isinstance(note, str) or len(note.strip()) < 12:
             raise VisualReviewError("A specific written visual rationale is required")
-        if choice != "match":
+        # For primary rows, match = matches the proposed official output.
+        # For lookalike rows, match = looks like the nearby official command;
+        # this is a possible *conflict*, never evidence for a safe negative.
+        if choice != "match" and primary:
             unresolved.append(source)
+        if not primary and choice in ("match", "uncertain"):
+            alias_conflicts.append(source)
         if primary and choice == "match" and source in NEEDED_CONTRASTS:
             for contrast in NEEDED_CONTRASTS[source]:
                 if contrast not in by_source:
@@ -434,12 +441,13 @@ def verify_review(packet: Path, review: Path) -> dict:
         raise VisualReviewError("Not all source categories have review decisions")
     return {
         "status": (
-            "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS" if unresolved
-            else "HUMAN_REVIEW_RECORDED_NOT_P1_PASS"
+            "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS"
+            if unresolved or alias_conflicts else "HUMAN_REVIEW_RECORDED_NOT_P1_PASS"
         ),
         "sources_checked": len(seen),
         "reviewed_images": sum(len(d["reviewed_packet_ids"]) for d in decisions),
         "unresolved_sources": sorted(unresolved),
+        "potential_command_alias_conflicts": sorted(alias_conflicts),
         "still_requires_ten_class_final_signoff": True,
         "model_outputs_unchanged": 10,
     }

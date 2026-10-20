@@ -15,6 +15,7 @@ from scripts.hagrid_zip_range import (
 )
 
 
+@patch.dict("os.environ", {"CI": "false", "GITHUB_ACTIONS": "false"})
 class HaGRIDRangeZipTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -87,17 +88,35 @@ class HaGRIDRangeZipTests(unittest.TestCase):
             with self.assertRaises(PreparationError):
                 select_members(self._members(), splits, sources)
 
-    def test_tampered_advertised_compressed_size_rejected(self):
+    def test_unselected_large_annotation_does_not_break_zip_index(self):
         b = bytearray(self.raw_zip)
         i = b.find(b"PK\x01\x02")
         self.assertGreaterEqual(i, 0)
+        # Simulates a large *other class* in the official 121-entry archive.
         struct.pack_into("<I", b, i+20, 40 * 1024 * 1024)
-        with self.assertRaises(PreparationError):
-            parse_directory(bytes(b)[-65536:], len(b))
+        members = parse_directory(bytes(b)[-65536:], len(b))
+        chosen = select_members(members, ("train",), ("no_gesture",))
+        self.assertEqual(len(chosen), 1)
+        with self.assertRaisesRegex(PreparationError, "Selected ZIP member exceeds"):
+            select_members(members, ("train",), ("one",))
+        with patch("scripts.hagrid_zip_range.get_range") as fake:
+            with self.assertRaisesRegex(PreparationError, "Selected ZIP member exceeds"):
+                read_member(members["annotations/train/one.json"])
+            fake.assert_not_called()
 
     def test_truncated_tail_rejected(self):
         with self.assertRaises(PreparationError):
             parse_directory(b"PK", len(self.raw_zip))
+
+    def test_ci_fails_before_any_private_annotation_download(self):
+        with patch.dict("os.environ", {"CI": "true", "GITHUB_ACTIONS": "true"}):
+            with patch("scripts.hagrid_zip_range.fetch_directory") as fetch:
+                with patch("scripts.hagrid_zip_range._approval") as signed:
+                    with self.assertRaisesRegex(PreparationError, "forbidden in CI"):
+                        extract(("one",), ("train",), self.root / "no",
+                                self.root / "review.json", 5)
+                    fetch.assert_not_called()
+                    signed.assert_not_called()
 
     def test_unlicensed_extraction_refuses_before_fetch(self):
         with patch("scripts.hagrid_zip_range.fetch_directory") as fake:
@@ -147,7 +166,7 @@ class HaGRIDRangeZipTests(unittest.TestCase):
             def __exit__(self, *_): pass
             def read(self, count): return b"abc"
         with patch("scripts.hagrid_zip_range.urllib.request.urlopen", return_value=Dummy()):
-            with self.assertRaises(PreparationError):
+            with self.assertRaisesRegex(PreparationError, "ignored Range"):
                 get_range(0, 9)
 
 

@@ -116,3 +116,6 @@ Run the local-only, license-gated [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md) pro
 ## Private ZIP64 JPEG selection (new P1-04 tooling)
 
 [docs/P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) explains how to retrieve **only 3–20 licensed source JPEGs per class** by HTTP Range from 40+GB ZIP64 archives, using the four-way `two_up`, `peace`, `peace_inverted`, `two_up_inverted` comparison. No full image ZIP was downloaded in the public CI probe, and no actual JPEG has been acquired by this project yet. `scripts/hagrid_image_zip64.py` requires the real owner-signed HaGRID license record, refuses actual CI downloads, checks ZIP64 offsets and CRC32, and writes only ignored local output.
+
+
+**Measured four-class train metadata cost (2026-10-20):** For `two_up/peace/peace_inverted/two_up_inverted`, the official ZIP index lists **4 files**, **54,388,405 compressed** and **323,899,528 uncompressed bytes**. The 80 MiB one-command default cap is sufficient for compressed transfer. This is directory-only inspection; personal data remains unacquired. See [one-command local review](P1_ONE_CLICK_REVIEW.md).

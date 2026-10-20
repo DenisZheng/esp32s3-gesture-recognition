@@ -118,3 +118,8 @@ Open the private file `data/reviews/packets/two-v1/index.html`, verify boxes and
 - Since each ZIP entry is independently DEFLATE-compressed, exact range extraction is viable **only with correct ZIP64 metadata and CRC**. This is proven on synthetic fixtures; actual image extraction is **NOT** yet proven.
 - Human subject rights, true train/validation/test subject isolation, full JPEG decoding, image quality, label completeness, pose ambiguity, occlusion, command confusion, and person demographics require local human verification before P1 PASS.
 - These tools do **not** train, export, quantize or run a model. P2, P3 and CoreS3 P4 are still PENDING.
+
+
+## One-command orchestration (recommended for the four-class number-two review)
+
+[**P1_ONE_CLICK_REVIEW.md**](P1_ONE_CLICK_REVIEW.md) provides a single **local-only** `python3 -m scripts.p1_review_workflow prepare` command that coordinates four licensed train JSONs, all four SHA256-pinned ZIP64 archives, limited JPEG member downloads, rollback-safe staging, private HTML visual cards and human-signoff verification. Unlike the individual `extract` commands, it guarantees the final workspace appears only after all four classes finish. The command remains **blocked until real owner license acceptance** and cannot download real annotations/images in CI.

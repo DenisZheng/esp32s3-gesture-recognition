@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import struct
 import tempfile
@@ -61,6 +62,8 @@ def get_range(start: int, end: int) -> bytes:
             if not match or tuple(map(int, match.groups())) != (start, end, ARCHIVE_BYTES):
                 raise PreparationError("Archive response does not match pinned size/range")
             data = response.read(size + 1)
+    except PreparationError:
+        raise  # Surface explicit HTTP 200/invalid-range failure.
     except (OSError, ValueError) as exc:
         raise PreparationError("HTTP Range transfer failed") from exc
     if len(data) != size:
@@ -106,8 +109,11 @@ def parse_directory(tail: bytes, total_bytes: int) -> dict[str, Member]:
         if match and match.group(2) in OFFICIAL_SOURCES:
             if name in members or f[3] & 1 or f[4] not in (0, 8):
                 raise PreparationError("Duplicate, encrypted, or unsupported JSON member")
-            if not (0 < f[8] <= MAX_COMPRESSED and 0 < f[9] <= MAX_UNCOMPRESSED):
-                raise PreparationError("Unsafe compressed/uncompressed member size")
+            # Enumerate all official class JSON metadata even when *unselected*
+            # classes are too big for this intentionally bounded extractor.
+            # Enforce per-member memory/network caps only on selected entries.
+            if not (0 < f[8] <= ARCHIVE_BYTES and 0 < f[9] <= 0xFFFFFFFF):
+                raise PreparationError("Malformed ZIP member size")
             members[name] = Member(name, f[8], f[9], f[16], f[7], f[4], f[3])
         cursor = next_pos
     if cursor != limit:
@@ -130,11 +136,18 @@ def select_members(all_members: dict[str, Member], splits: tuple[str, ...],
             name = f"annotations/{split}/{source}.json"
             if name not in all_members:
                 raise PreparationError("Requested class/split does not exist in archive")
-            result.append(all_members[name])
+            member = all_members[name]
+            if not (0 < member.compressed <= MAX_COMPRESSED and
+                    0 < member.uncompressed <= MAX_UNCOMPRESSED):
+                raise PreparationError("Selected ZIP member exceeds transfer/decode safety cap")
+            result.append(member)
     return result
 
 
 def read_member(member: Member, getter=get_range) -> bytes:
+    if not (0 < member.compressed <= MAX_COMPRESSED and
+            0 < member.uncompressed <= MAX_UNCOMPRESSED):
+        raise PreparationError("Selected ZIP member exceeds transfer/decode safety cap")
     header = getter(member.offset, member.offset + 29)
     sig, _version, flags, method, _time, _date, _crc, _cs, _us, nl, el = (
         struct.unpack("<I5H3I2H", header)
@@ -177,6 +190,8 @@ def fetch_directory() -> dict[str, Member]:
 
 def extract(sources: tuple[str, ...], splits: tuple[str, ...], output: Path,
             license_ack: Path, max_transfer_mib: int) -> dict:
+    if os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true":
+        raise PreparationError("Real HaGRID annotation extraction is forbidden in CI")
     _approval(license_ack, "license")
     if not (1 <= max_transfer_mib <= 256):
         raise PreparationError("Invalid requested byte budget")
@@ -231,8 +246,8 @@ def main() -> None:
     a = p.parse_args()
     try:
         splits, sources = tuple(a.splits), tuple(a.sources)
-        selected = select_members(fetch_directory(), splits, sources)
         if a.mode == "inspect":
+            selected = select_members(fetch_directory(), splits, sources)
             result = {
                 "archive_bytes": ARCHIVE_BYTES,
                 "selected_json_files": len(selected),

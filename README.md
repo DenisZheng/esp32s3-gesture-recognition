@@ -87,3 +87,6 @@ For P1-03 class-adjudication evidence, see the [private HTML visual mapping revi
 
 
 The [selective HaGRID ZIP64 JPEG workflow](docs/P1_IMAGE_ZIP64.md) allows an **authorized local** reviewer to stage a few train JPEGs via byte-range reads instead of downloading the full 40+GB per-class archives. All four number-two source archives passed actual ZIP64 index-only smoke checks; source ZIP lengths and central-directory SHA256 hashes are now pinned. No personal images were downloaded; owner license acceptance and real JPG QA remain pending.
+
+
+**Next local handoff:** [P1 one-command private gesture review](docs/P1_ONE_CLICK_REVIEW.md) combines licensed train annotation range reads, four locked ZIP64 image archive reads, private HTML cards and structural signoff verification into a rollback-safe local workflow. Use `python3 -m scripts.p1_review_workflow plan` for a truly offline preview. **No real HaGRID photo was used in this development slice.**

@@ -51,3 +51,11 @@ Index-only remote smoke tests establish that a 42.73 GB archive supports ranged 
 
 
 **P1-04 metadata baseline update:** Four official source archives (two_up, peace, peace_inverted, two_up_inverted) now have verified byte sizes and central directory SHA256 pins in code, and full ZIP64 central index parsing succeeded in GitHub Actions without real image payloads. Authentic image extraction and licensed human labeling are still outstanding.
+
+
+### P1 local four-way review workflow
+
+`python3 -m scripts.p1_review_workflow plan` is offline-only. `prepare` requires authentic local owner license acceptance before *any* real image/annotation download and refuses public CI environments; it publishes an ignored local workspace only after all four train-only classes + HTML review packet are present. `verify` checks locally signed evidence integrity but NEVER substitutes for an actual human gesture judgment or final ten-class P1 signoff. Source tests use synthetic media only. [Operator guide](P1_ONE_CLICK_REVIEW.md).
+
+
+**P1 archive index selection regression:** An official annotations.zip contains large unrelated JSON entries. Metadata parsing must tolerate oversized **unselected** classes while rejecting requested files above the decode/download cap and honoring aggregate byte budget. This was verified on metadata-only official four-class selection (4 train members totaling 54,388,405 compressed bytes); real authorizations/data review remain pending.

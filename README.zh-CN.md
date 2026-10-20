@@ -45,3 +45,6 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 
 
 **P1-04 四类对照源均已实测：** `two_up`、`peace`、`peace_inverted`、`two_up_inverted` 的官方 ZIP64 索引均通过 GitHub Actions 真实读取，归档精确大小及中央索引 SHA256 已固定，数据源更改会拒绝下载。真实人物图片依然没有下载，许可签核和人工图像验收仍未完成。 [验证记录](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39420065430)。
+
+
+**新增 P1 一键本地验收入口：** `python3 -m scripts.p1_review_workflow plan` 可离线查看所需资料；授权人员完成许可签核后，`prepare` 才能在本地一次准备四类训练样本、JPEG 和带检测框的 HTML 报告；`verify` 校验人工记录和图片哈希。失败会回滚，公共 CI 严禁下载真实标注/图片。详细操作见 [P1_ONE_CLICK_REVIEW.md](docs/P1_ONE_CLICK_REVIEW.md)。本功能暂不代表十类映射/P1 已通过。

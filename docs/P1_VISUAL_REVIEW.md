@@ -101,3 +101,8 @@ If real evidence indicates `peace` is better than `two_up`, open a deliberate co
 ### Optional selective ZIP64 JPEG acquisition (after owner permission)
 
 Once the corresponding `train/<source>.json` annotation records have been fetched locally, follow the four `inspect` and `extract` commands in [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) to stage 3–20 photos per class without downloading four 40+ GB archives. The packet builder still generates private HTML/image hashes locally and never uploads images to GitHub.
+
+
+## Recommended handoff: single local command instead of six manual extraction steps
+
+See [P1_ONE_CLICK_REVIEW.md](P1_ONE_CLICK_REVIEW.md). `scripts/p1_review_workflow.py` uses the same strict packet builder and review verifier and prepares all four number-two contrast classes within a **transactional private directory**, after actual research license acceptance. It never approves a mapping on its own and does not inspect val/test.

@@ -44,7 +44,7 @@ ESPDet-Pico YAML + nc=10 -> scratch PyTorch FP32                  letterbox 224x
 
 ## Run-time memory and latency
 
-Memory on 8MB PSRAM is shared by camera frame buffers, model arena, scratch tensors and display stack; flash partition also needs a realistic model/storage budget. Single-class cat reference on S3 reportedly 126.2ms at 224, which is *not* a ten-class target or a CoreS3 FPS guarantee. Measure separately: capture, colorspace conversion, preprocessing, model run, postprocessing, display and total camera-to-result p50/p95; also measure PSRAM high-water and free heap during multi-hand frames.
+The CoreS3 uses a GC0308 camera (M5Stack/Espressif documentation); a pinned CoreS3 BSP and ESP-IDF 5.4.4 camera build have NOT yet been tested, see [BOARD_BASELINE](BOARD_BASELINE.md). Memory on 8MB PSRAM is shared by camera frame buffers, model arena, scratch tensors and display stack; flash partition also needs a realistic model/storage budget. Single-class cat reference on S3 reportedly 126.2ms at 224, which is *not* a ten-class target or a CoreS3 FPS guarantee. Measure separately: capture, colorspace conversion, preprocessing, model run, postprocessing, display and total camera-to-result p50/p95; also measure PSRAM high-water and free heap during multi-hand frames.
 
 ## P3/P4 acceptance parity harness design
 

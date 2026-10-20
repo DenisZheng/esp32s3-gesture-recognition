@@ -8,7 +8,7 @@
 
 已核查：官方 ESPDetect 结构可配置 `nc=10`，但 ESP-Detection 的量化评估样例写死 `NC=1`；ESP-DL v3.3.13 NMS 默认不判断类别 ID。二者必须在 P3/P4 经独立多类/多手测试确认。
 
-核心文档：[总体计划](docs/PLAN.md) · [架构](docs/ARCHITECTURE.md) · [兼容性](docs/UPSTREAM_COMPATIBILITY.md) · [数据与隐私规则](docs/DATA_POLICY.md) · [验收规则](docs/ACCEPTANCE.md) · [许可](docs/THIRD_PARTY.md) · [风险](docs/RISKS.md)。
+核心文档：[总体计划](docs/PLAN.md) · [架构](docs/ARCHITECTURE.md) · [CoreS3摄像头基线](docs/BOARD_BASELINE.md) · [兼容性](docs/UPSTREAM_COMPATIBILITY.md) · [数据与隐私规则](docs/DATA_POLICY.md) · [验收规则](docs/ACCEPTANCE.md) · [许可](docs/THIRD_PARTY.md) · [风险](docs/RISKS.md)。
 
 **P0 本地验证（无需数据集）：**
 

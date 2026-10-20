@@ -22,3 +22,4 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 | R16 | M | Off-target model-size/CPU claims inferred from single-class cat 126.2ms | Measure ten-class CoreS3 model; report net latency and end-to-end camera FPS | PENDING |
 | R17 | M | P1 source semantic mismatch `two_up->two` and `palm->five` | Before conversion signoff official gesture picture vs independent HaGRID samples | PENDING |
 | R18 | M | HaGRID git commit does not identify dataset image/annotation archives | Local SHA256 dataset manifests, clear dataset release and download URLs | PENDING |
+| R19 | H | CoreS3 GC0308 source camera interface and BSP/esp_video driver not built against IDF 5.4.4 | P4 pin tested BSP, validate capture/format byte order, shared I2C power/reset and PSRAM pressure | PENDING |

@@ -57,7 +57,7 @@ Date: 2026-10-20. Project: `DenisZheng/esp32s3-gesture-det`. Baseline: CoreS3 / 
 
 ## P4 — Real CoreS3 (PENDING; real hardware mandatory)
 
-- **P4-01** Implement minimal IDF v5.4.4 app / M5Stack CoreS3 board config with locked ESP-DL v3.3.13; camera and PSRAM initialization, image format, resolution/stride, rotation/mirror documented. App consumes generated `.espdl`, not official weights.
+- **P4-01** Implement minimal IDF v5.4.4 app / M5Stack CoreS3 config (GC0308 sensor; BSP/esp_video pin after smoke test) with locked ESP-DL v3.3.13; camera and PSRAM initialization, image format, resolution/stride, rotation/mirror documented. App consumes generated `.espdl`, not official weights.
 - **P4-02** Implement ten-name lookup and maximum box count; decode 3 stages, compare options for class-agnostic vs class-aware NMS (and one-class-per-hand arbitration). Test two hands same/different gestures and overlaps; preserve access to per-hand confidence.
 - **P4-03** Fixed-image parity FIRST, compare preprocessed tensor checksums and decoded boxes/labels/scores against PC, define tolerances for quantization and pixel coordinate rounding.
 - **P4-04** Real live camera stream, at least all 10 gestures, `no_hand`, idle natural postures, other gestures, two hands, overlapping hands, occlusion, multiple scales, lighting. Measure p50/p95 full pipeline latency, model-only latency, FPS, internal heap/PSRAM peak/free and 30-minute crash-free capture session; raw images stay private.

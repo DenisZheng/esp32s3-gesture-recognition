@@ -49,7 +49,13 @@ class HaGRIDP1Tests(unittest.TestCase):
             "reviewer": "synthetic only", "reviewed_on": "2026-10-20",
             "classes": [
                 {"source": source, "output": CLASS_NAMES[i],
-                 "approved": True, "samples_reviewed": 3, "official_reference_checked": True}
+                 "approved": True, "samples_reviewed": 3, "official_reference_checked": True,
+                 "contrasts_reviewed": {
+                     "two_up": ["peace", "peace_inverted", "two_up_inverted"],
+                     "palm": ["stop", "stop_inverted"],
+                     "three": ["three2", "three3", "three_gun"],
+                     "one": ["point", "mute"],
+                 }.get(source, [])}
                 for source, i in SOURCE_TO_INDEX.items()
             ],
         }), encoding="utf-8")
@@ -154,6 +160,24 @@ class HaGRIDP1Tests(unittest.TestCase):
         with self.assertRaises(PreparationError):
             self._convert()
         self.assertFalse(self.output.exists())
+
+    def test_two_mapping_requires_review_of_peace_variants(self):
+        review = json.loads(self.mapping.read_text())
+        for row in review["classes"]:
+            if row["source"] == "two_up":
+                row["contrasts_reviewed"] = ["two_up_inverted"]
+        self.mapping.write_text(json.dumps(review))
+        with self.assertRaisesRegex(PreparationError, "variants not reviewed"):
+            self._convert()
+
+    def test_palm_mapping_requires_stop_comparison(self):
+        review = json.loads(self.mapping.read_text())
+        for row in review["classes"]:
+            if row["source"] == "palm":
+                row["contrasts_reviewed"] = []
+        self.mapping.write_text(json.dumps(review))
+        with self.assertRaisesRegex(PreparationError, "variants not reviewed"):
+            self._convert()
 
     def test_mapping_visual_approval_required(self):
         doc = json.loads(self.mapping.read_text())

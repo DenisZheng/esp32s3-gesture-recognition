@@ -1,5 +1,5 @@
 {
-  "note": "EXAMPLE ONLY; replace with PRIVATE evidence under data/reviews after actual visual review. Do not commit accepted reviews.",
+  "note": "INVALID UNSIGNED TEMPLATE. For two_up/palm/three/one the prelisted contrasts require REAL licensed visual review; listing them in a template is NOT acceptance. approved remains false. Keep completed review private.",
   "reviewer": "",
   "reviewed_on": "",
   "classes": [
@@ -8,70 +8,94 @@
       "output": "one",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": [
+        "point",
+        "mute"
+      ]
     },
     {
       "source": "two_up",
       "output": "two",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": [
+        "peace",
+        "peace_inverted",
+        "two_up_inverted"
+      ]
     },
     {
       "source": "three",
       "output": "three",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": [
+        "three2",
+        "three3",
+        "three_gun"
+      ]
     },
     {
       "source": "four",
       "output": "four",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": []
     },
     {
       "source": "palm",
       "output": "five",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": [
+        "stop",
+        "stop_inverted"
+      ]
     },
     {
       "source": "like",
       "output": "like",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": []
     },
     {
       "source": "ok",
       "output": "ok",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": []
     },
     {
       "source": "no_gesture",
       "output": "no_gesture",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": []
     },
     {
       "source": "call",
       "output": "call",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": []
     },
     {
       "source": "dislike",
       "output": "dislike",
       "approved": false,
       "samples_reviewed": 0,
-      "official_reference_checked": false
+      "official_reference_checked": false,
+      "contrasts_reviewed": []
     }
   ]
 }

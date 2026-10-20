@@ -88,6 +88,24 @@ def _approval(path: Path, kind: str) -> dict:
                 or item.get("official_reference_checked") is not True
             ):
                 raise PreparationError("One or more visual class mappings are unreviewed")
+            # Figure comparison exposed near-duplicate numeric/palm poses.
+            # Require the reviewer to explicitly compare alternatives instead of
+            # accepting a plausible source solely by its folder name.
+            near_aliases = {
+                "two_up": {"peace", "peace_inverted", "two_up_inverted"},
+                "palm": {"stop", "stop_inverted"},
+                "three": {"three2", "three3", "three_gun"},
+                "one": {"point", "mute"},
+            }
+            required = near_aliases.get(source, set())
+            if required:
+                contrasts = item.get("contrasts_reviewed")
+                if (
+                    not isinstance(contrasts, list)
+                    or any(not isinstance(v, str) for v in contrasts)
+                    or not required <= set(contrasts)
+                ):
+                    raise PreparationError("Required visual gesture variants not reviewed")
             found.add(key)
         if found != expected:
             raise PreparationError("Ten signed-off source/output mappings required")

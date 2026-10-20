@@ -27,3 +27,7 @@ HaGRID source: https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/images/gestu
 The ESP-DL v3.3.14 official gesture illustration (Git blob `64c4e7c856780d50ecfe17f62f94d491362c48d8`) shows `two` with separated index/middle fingers (V). The HaGRIDv2 official illustrated catalog (Git blob `c766c4eec61481326235c0dc8d464d5c6ff9d9b1`) shows `two_up` with much closer fingers; HaGRID `peace` appears more similar to ESP-DL's V. Therefore **`two_up → two` is an elevated-risk provisional mapping, NOT approved**. Do not train `peace` as class-7 negative; keep it and its variants in quarantine.
 
 `palm → five` appears similar at figure-level, but `stop` variants may be confusable; licensed real samples, rotations, mirrors, multiple hands, distance and occlusion must still be reviewed. Full 34-source policy: [HARD_NEGATIVES.md](HARD_NEGATIVES.md).
+
+## Explicit contrasts required for mapping signoff
+
+The programmatic visual signoff now requires the private reviewer to list the following **actually compared** source variants in `contrasts_reviewed` for the relevant output: `two_up` versus `peace, peace_inverted, two_up_inverted`; `palm` versus `stop, stop_inverted`; `three` versus `three2, three3, three_gun`; `one` versus `point, mute`. Simply copying the fields from the unsigned template **is not proof of visual review**. The fields are a completeness guard; P1 acceptance still requires human evidence.

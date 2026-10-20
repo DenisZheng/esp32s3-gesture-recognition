@@ -37,7 +37,7 @@ On your **own workstation only, after valid license acknowledgment**, extract th
       --license-ack data/reviews/hagrid-license-ack.json \
       --max-transfer-mib 80
 
-This extracts only compressed JSON members, NOT JPGs. The original HaGRID images are hosted in **large per-gesture ZIPs (often >40 GB each)**; the metadata tool does not pretend to obtain sample JPEGs or the full 1.5 TB dataset.
+This extracts only compressed JSON members, NOT JPGs. The original HaGRID images are in **large per-gesture ZIP64 archives (e.g. two_up.zip = 42.73 GB)**. Rather than downloading any full class ZIP, the new [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) procedure can retrieve a few authorized source JPEGs by exact HTTP Range, using just ~4 MB of metadata index per class. **Real image download is blocked until actual owner license acceptance**, and only the two_up remote index has been smoke-tested.
 
 ## 2. Stage a few separately permitted local images
 
@@ -96,3 +96,8 @@ If real evidence indicates `peace` is better than `two_up`, open a deliberate co
 - Issue #3: real evidence and **signed decisions for all ten classes** (**missing**).
 - Issue #4: authorized sample JPG availability, train-only visual QA, held-out data separation, verified empty-room negatives (**missing**).
 - P2 training, ONNX quantization and CoreS3 real-camera proof are **NOT started**. A green CI tests only synthetic fixtures.
+
+
+### Optional selective ZIP64 JPEG acquisition (after owner permission)
+
+Once the corresponding `train/<source>.json` annotation records have been fetched locally, follow the four `inspect` and `extract` commands in [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) to stage 3–20 photos per class without downloading four 40+ GB archives. The packet builder still generates private HTML/image hashes locally and never uploads images to GitHub.

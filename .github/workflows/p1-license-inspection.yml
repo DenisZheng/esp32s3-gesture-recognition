@@ -1,0 +1,33 @@
+name: P1 temporary HaGRID license inspection
+on:
+  push:
+    branches: ["feat/p1-license-review"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download immutable-source PDF and extract complete license text
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --max-time 60 \
+            "https://raw.githubusercontent.com/hukenovs/hagrid/cade4dd4ba162832ef2b62b92d89d4d7a2dc2b75/license/en_us.pdf" \
+            -o /tmp/hagrid-en_us.pdf
+          test "$(head -c 4 /tmp/hagrid-en_us.pdf)" = "%PDF"
+          echo "=== source metadata ==="
+          wc -c /tmp/hagrid-en_us.pdf
+          sha256sum /tmp/hagrid-en_us.pdf
+          git hash-object --stdin < /tmp/hagrid-en_us.pdf
+          pdfinfo /tmp/hagrid-en_us.pdf | grep -E 'Pages:|Title:|Creator:|Producer:'
+          command -v pdftotext
+          pdftotext -layout /tmp/hagrid-en_us.pdf /tmp/hagrid-en_us.txt
+          echo "=== BEGIN FULL ENGLISH LICENSE TRANSCRIPTION ==="
+          cat /tmp/hagrid-en_us.txt
+          echo "=== END FULL ENGLISH LICENSE TRANSCRIPTION ==="
+          rm -f /tmp/hagrid-en_us.pdf /tmp/hagrid-en_us.txt

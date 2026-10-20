@@ -107,6 +107,8 @@ class LocalReviewWorkflowTests(unittest.TestCase):
         self.assertEqual(report["status"], "PLAN_ONLY_NO_DATA_ACCESSED")
         self.assertEqual(report["source_categories"], list(SOURCES))
         self.assertEqual(report["model_output_classes"], 10)
+        self.assertEqual(report["official_train_json_compressed_bytes"], 54_388_405)
+        self.assertEqual(report["official_train_json_uncompressed_bytes"], 323_899_528)
         self.assertTrue(report["requires_real_owner_license_acceptance"])
 
     def test_synthetic_end_to_end_packet_is_atomic_and_private(self):

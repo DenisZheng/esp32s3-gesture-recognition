@@ -29,3 +29,10 @@ P1 数据审计与微样本转换用法：[docs/P1_DATA_TOOLING.md](docs/P1_DATA
 
 
 HaGRIDv2 使用自行改写的许可，**不是标准 CC BY-SA 4.0**。详见 [完整许可审查记录](docs/HAGRID_LICENSE_AUDIT.md)。
+
+
+## P1 数据筛选补充
+
+HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据**；本项目的 ESPDet-Pico 始终只输出 **10 类**。其它 24 类不能全部作为负样本。当前划分为 7 类需单独审核的单手非指令候选、10 类形态易混淆而暂缓的类别、7 类双手组合暂缓类别。
+
+特别注意 ESP-DL 的数字 `two` 是分开的 V 形，而 HaGRID `two_up` 双指更靠拢、`peace` 更像 V 形。正式批准之前，不允许把 `peace` 当作 `no_gesture` 训练。参见 [P1 难负样本政策](docs/HARD_NEGATIVES.md)。

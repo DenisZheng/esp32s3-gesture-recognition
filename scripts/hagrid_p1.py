@@ -20,6 +20,9 @@ from scripts.data_contract import (
     AnnotationError, CLASS_NAMES, SOURCE_TO_INDEX,
     assert_subject_disjoint, strict_hand_labels,
 )
+from scripts.hagrid_policy import (
+    PolicyError, approve_hard_negatives, validate_requested_sources,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 OFFICIAL_LICENSE_SHA256 = "14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22"
@@ -85,6 +88,24 @@ def _approval(path: Path, kind: str) -> dict:
                 or item.get("official_reference_checked") is not True
             ):
                 raise PreparationError("One or more visual class mappings are unreviewed")
+            # Figure comparison exposed near-duplicate numeric/palm poses.
+            # Require the reviewer to explicitly compare alternatives instead of
+            # accepting a plausible source solely by its folder name.
+            near_aliases = {
+                "two_up": {"peace", "peace_inverted", "two_up_inverted"},
+                "palm": {"stop", "stop_inverted"},
+                "three": {"three2", "three3", "three_gun"},
+                "one": {"point", "mute"},
+            }
+            required = near_aliases.get(source, set())
+            if required:
+                contrasts = item.get("contrasts_reviewed")
+                if (
+                    not isinstance(contrasts, list)
+                    or any(not isinstance(v, str) for v in contrasts)
+                    or not required <= set(contrasts)
+                ):
+                    raise PreparationError("Required visual gesture variants not reviewed")
             found.add(key)
         if found != expected:
             raise PreparationError("Ten signed-off source/output mappings required")
@@ -104,7 +125,9 @@ def _paths(annotation_root: Path, sources: tuple[str, ...]):
             yield split, source, path
 
 
-def _check_sample(stem: str, item: object) -> tuple[str, list[str]]:
+def _check_sample(
+    stem: str, item: object, non_command_sources: frozenset[str] = frozenset()
+) -> tuple[str, list[str]]:
     if not isinstance(stem, str) or not SAFE_NAME.fullmatch(stem):
         raise PreparationError("Unsafe or malformed image key")
     if not isinstance(item, dict):
@@ -121,14 +144,22 @@ def _check_sample(stem: str, item: object) -> tuple[str, list[str]]:
     if not isinstance(boxes, list) or not isinstance(labels, list):
         raise PreparationError("Missing or malformed per-hand boxes/labels")
     try:
-        rows = strict_hand_labels(boxes, labels)
+        rows = strict_hand_labels(boxes, labels, non_command_sources=non_command_sources)
     except (AnnotationError, TypeError, ValueError) as exc:
         raise PreparationError("Invalid, unknown, or incomplete per-hand annotation") from exc
     return subject, rows
 
 
-def _scan(annotation_root: Path, sources: tuple[str, ...]):
+def _scan(
+    annotation_root: Path,
+    sources: tuple[str, ...],
+    non_command_sources: frozenset[str] = frozenset(),
+):
     """Compute only aggregate metadata; never expose IDs, sample keys or images."""
+    try:
+        validate_requested_sources(sources, conversion=bool(non_command_sources))
+    except PolicyError as exc:
+        raise PreparationError(str(exc)) from exc
     users = {split: set() for split in SPLITS}
     stats = {
         "source": "HaGRIDv2 Hagrid_v2-1M (local supplied annotations)",
@@ -151,7 +182,7 @@ def _scan(annotation_root: Path, sources: tuple[str, ...]):
             if isinstance(item, dict) and isinstance(item.get("user_id"), str) and item["user_id"]:
                 users[split].add(item["user_id"])
             try:
-                _subject, rows = _check_sample(stem, item)
+                _subject, rows = _check_sample(stem, item, non_command_sources)
             except PreparationError:
                 stats["rejected_by_split"][split] += 1
                 if isinstance(item, dict) and (item.get("united_bbox") or item.get("united_label")):
@@ -176,12 +207,29 @@ def convert(
     annotation_root: Path, images_root: Path, output: Path,
     license_ack: Path, mapping_ack: Path, sources: tuple[str, ...],
     limit_per_source: int = 5,
+    *,
+    hard_negative_sources: frozenset[str] = frozenset(),
+    hard_negative_ack: Path | None = None,
 ) -> dict:
+    try:
+        requested_candidates = validate_requested_sources(sources, conversion=True)
+        if not requested_candidates <= hard_negative_sources:
+            raise PolicyError("Source selection contains unreviewed negative candidates")
+        if hard_negative_sources:
+            if hard_negative_ack is None:
+                raise PolicyError("Private signed hard-negative review required")
+            approved = approve_hard_negatives(hard_negative_ack, hard_negative_sources)
+        else:
+            if hard_negative_ack is not None:
+                raise PolicyError("Unexpected negative review file without selected negatives")
+            approved = frozenset()
+    except PolicyError as exc:
+        raise PreparationError(str(exc)) from exc
     if not (1 <= limit_per_source <= 100):
         raise PreparationError("Micro-sample cap must be between 1 and 100 per source per split")
     _approval(license_ack, "license")
     _approval(mapping_ack, "mapping")
-    stats = _scan(annotation_root, sources)
+    stats = _scan(annotation_root, sources, approved)
     output = output.resolve()
     local_repo = ROOT.resolve()
     if output == local_repo or (
@@ -205,7 +253,7 @@ def convert(
                 if count >= limit_per_source:
                     break
                 try:
-                    subject, rows = _check_sample(stem, item)
+                    subject, rows = _check_sample(stem, item, approved)
                 except PreparationError:
                     continue
                 if subject in used_subjects:
@@ -242,6 +290,7 @@ def convert(
         stats["selected_boxes_by_class"] = {name: labels_written[name] for name in CLASS_NAMES}
         stats["missing_or_invalid_jpg_by_split"] = {s: missing_images[s] for s in SPLITS}
         stats["distinct_selected_image_hashes"] = len(taken_digests)
+        stats["approved_hard_negative_sources"] = sorted(approved)
         stats["license_review_present"] = True
         stats["visual_mapping_approval_present"] = True
         stats["limitations"] = (
@@ -269,12 +318,14 @@ def main() -> None:
     parser.add_argument("--license-ack", type=Path)
     parser.add_argument("--mapping-ack", type=Path)
     parser.add_argument("--limit-per-source", type=int, default=5)
+    parser.add_argument("--hard-negative-sources", nargs="+", default=[])
+    parser.add_argument("--hard-negative-ack", type=Path)
     args = parser.parse_args()
     sources = tuple(args.sources)
-    if not sources or len(sources) != len(set(sources)) or any(
-        source not in SOURCE_TO_INDEX for source in sources
-    ):
-        parser.error("--sources must be unique canonical source names")
+    try:
+        validate_requested_sources(sources)
+    except PolicyError as exc:
+        parser.error(str(exc))
     try:
         if args.mode == "audit":
             stats = audit(args.annotations, sources)
@@ -284,6 +335,8 @@ def main() -> None:
             stats = convert(
                 args.annotations, args.images, args.output, args.license_ack,
                 args.mapping_ack, sources, args.limit_per_source,
+                hard_negative_sources=frozenset(args.hard_negative_sources),
+                hard_negative_ack=args.hard_negative_ack,
             )
     except PreparationError as exc:
         parser.exit(2, f"FAIL CLOSED: {exc}\n")

@@ -24,7 +24,7 @@ class HaGRIDRangeZipTests(unittest.TestCase):
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as z:
             for split in ("train", "val", "test"):
-                for cls in ("one", "no_gesture"):
+                for cls in ("one", "no_gesture", "fist"):
                     key = f"annotations/{split}/{cls}.json"
                     content = json.dumps({"synthetic": {
                         "user_id": f"FAKE-NEVER-UPLOAD-{split}-{cls}",
@@ -45,7 +45,7 @@ class HaGRIDRangeZipTests(unittest.TestCase):
 
     def test_directory_reads_only_canonical_classes(self):
         members = self._members()
-        self.assertEqual(len(members), 6)
+        self.assertEqual(len(members), 9)
         self.assertNotIn("../unsafe.json", members)
         self.assertTrue(all(m.method == 8 for m in members.values()))
 
@@ -54,6 +54,12 @@ class HaGRIDRangeZipTests(unittest.TestCase):
         self.assertEqual([m.path for m in chosen], [
             "annotations/train/no_gesture.json",
             "annotations/test/no_gesture.json",
+        ])
+
+    def test_select_reviewable_negative_metadata_without_changing_models(self):
+        chosen = select_members(self._members(), ("train", "val"), ("fist",))
+        self.assertEqual([m.path for m in chosen], [
+            "annotations/train/fist.json", "annotations/val/fist.json"
         ])
 
     def test_selected_member_recovers_original_json_with_crc(self):

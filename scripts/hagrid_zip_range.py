@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from scripts.data_contract import SOURCE_TO_INDEX
+from scripts.hagrid_policy import OFFICIAL_SOURCES
 from scripts.hagrid_p1 import PreparationError, ROOT, SPLITS, _approval
 
 URL = ("https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/"
@@ -102,7 +103,7 @@ def parse_directory(tail: bytes, total_bytes: int) -> dict[str, Member]:
         except UnicodeError as exc:
             raise PreparationError("Invalid ZIP filename encoding") from exc
         match = ENTRY_PATTERN.fullmatch(name)
-        if match and match.group(2) in SOURCE_TO_INDEX:
+        if match and match.group(2) in OFFICIAL_SOURCES:
             if name in members or f[3] & 1 or f[4] not in (0, 8):
                 raise PreparationError("Duplicate, encrypted, or unsupported JSON member")
             if not (0 < f[8] <= MAX_COMPRESSED and 0 < f[9] <= MAX_UNCOMPRESSED):
@@ -124,7 +125,7 @@ def select_members(all_members: dict[str, Member], splits: tuple[str, ...],
         if split not in SPLITS:
             raise PreparationError("Unknown requested split")
         for source in sources:
-            if source not in SOURCE_TO_INDEX:
+            if source not in OFFICIAL_SOURCES:
                 raise PreparationError("Unknown requested gesture source")
             name = f"annotations/{split}/{source}.json"
             if name not in all_members:

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from scripts.data_contract import CLASS_NAMES, SOURCE_TO_INDEX
 from scripts.hagrid_p1 import PreparationError, audit, convert, _check_sample, OFFICIAL_LICENSE_SHA256
+from scripts.hagrid_policy import policy_sha256
 
 
 class HaGRIDP1Tests(unittest.TestCase):
@@ -48,7 +49,13 @@ class HaGRIDP1Tests(unittest.TestCase):
             "reviewer": "synthetic only", "reviewed_on": "2026-10-20",
             "classes": [
                 {"source": source, "output": CLASS_NAMES[i],
-                 "approved": True, "samples_reviewed": 3, "official_reference_checked": True}
+                 "approved": True, "samples_reviewed": 3, "official_reference_checked": True,
+                 "contrasts_reviewed": {
+                     "two_up": ["peace", "peace_inverted", "two_up_inverted"],
+                     "palm": ["stop", "stop_inverted"],
+                     "three": ["three2", "three3", "three_gun"],
+                     "one": ["point", "mute"],
+                 }.get(source, [])}
                 for source, i in SOURCE_TO_INDEX.items()
             ],
         }), encoding="utf-8")
@@ -63,6 +70,23 @@ class HaGRIDP1Tests(unittest.TestCase):
     def _convert(self):
         return convert(self.annotations, self.images, self.output, self.license,
                        self.mapping, self.sources, limit_per_source=1)
+
+    def _approve_negative(self, source="fist"):
+        path = self.root / "private-hard-negative-signoff.json"
+        path.write_text(json.dumps({
+            "reviewer": "synthetic reviewer ONLY",
+            "reviewed_on": "2026-10-20",
+            "policy_sha256": policy_sha256(),
+            "approved_sources": [{
+                "source": source,
+                "output": "no_gesture",
+                "approved": True,
+                "samples_reviewed": 3,
+                "licensed_images_reviewed": True,
+                "per_hand_boxes_reviewed": True,
+            }],
+        }), encoding="utf-8")
+        return path
 
     def test_metadata_audit_aggregates_without_identities(self):
         report = audit(self.annotations, self.sources)
@@ -137,6 +161,24 @@ class HaGRIDP1Tests(unittest.TestCase):
             self._convert()
         self.assertFalse(self.output.exists())
 
+    def test_two_mapping_requires_review_of_peace_variants(self):
+        review = json.loads(self.mapping.read_text())
+        for row in review["classes"]:
+            if row["source"] == "two_up":
+                row["contrasts_reviewed"] = ["two_up_inverted"]
+        self.mapping.write_text(json.dumps(review))
+        with self.assertRaisesRegex(PreparationError, "variants not reviewed"):
+            self._convert()
+
+    def test_palm_mapping_requires_stop_comparison(self):
+        review = json.loads(self.mapping.read_text())
+        for row in review["classes"]:
+            if row["source"] == "palm":
+                row["contrasts_reviewed"] = []
+        self.mapping.write_text(json.dumps(review))
+        with self.assertRaisesRegex(PreparationError, "variants not reviewed"):
+            self._convert()
+
     def test_mapping_visual_approval_required(self):
         doc = json.loads(self.mapping.read_text())
         doc["classes"][1]["approved"] = False
@@ -209,6 +251,71 @@ class HaGRIDP1Tests(unittest.TestCase):
         with self.assertRaises(PreparationError):
             convert(self.annotations, self.images, self.output, self.license,
                     self.mapping, self.sources, limit_per_source=100000)
+
+    def test_unsigned_candidate_source_fails_before_image_access(self):
+        with self.assertRaises(PreparationError):
+            convert(self.annotations, self.images, self.output, self.license,
+                    self.mapping, ("one", "palm", "fist"),
+                    hard_negative_sources=frozenset({"fist"}))
+        self.assertFalse(self.output.exists())
+
+    def test_quarantined_peace_cannot_be_declared_background(self):
+        ack = self._approve_negative("peace")
+        with self.assertRaises(PreparationError):
+            convert(self.annotations, self.images, self.output, self.license,
+                    self.mapping, self.sources,
+                    hard_negative_sources=frozenset({"peace"}),
+                    hard_negative_ack=ack)
+        self.assertFalse(self.output.exists())
+
+    def test_candidate_without_explicit_source_signoff_is_rejected(self):
+        with self.assertRaises(PreparationError):
+            convert(self.annotations, self.images, self.output, self.license,
+                    self.mapping, ("one", "palm", "fist"))
+        self.assertFalse(self.output.exists())
+
+    def test_second_hand_reviewed_fist_has_own_class_seven_box(self):
+        self._rewrite("train", "one", lambda item: item.update({
+            "bboxes": [[0.05, 0.10, 0.30, 0.35], [0.6, 0.5, 0.2, 0.2]],
+            "labels": ["one", "fist"],
+        }))
+        ack = self._approve_negative()
+        report = convert(
+            self.annotations, self.images, self.output, self.license,
+            self.mapping, self.sources, limit_per_source=1,
+            hard_negative_sources=frozenset({"fist"}), hard_negative_ack=ack,
+        )
+        rows = (self.output / "labels/train/one/synthetic_train_one.txt").read_text().splitlines()
+        self.assertEqual([int(row.split()[0]) for row in rows], [0, 7])
+        self.assertEqual(report["approved_hard_negative_sources"], ["fist"])
+        self.assertNotIn("synthetic_subject", json.dumps(report))
+
+    def test_reviewed_fist_source_can_be_sampled_without_new_model_class(self):
+        for split in ("train", "val", "test"):
+            key = f"synthetic_{split}_fist"
+            folder = self.annotations / split
+            (folder / "fist.json").write_text(json.dumps({
+                key: {
+                    "bboxes": [[0.1, 0.2, 0.25, 0.25]],
+                    "labels": ["fist"],
+                    "united_bbox": None,
+                    "united_label": None,
+                    "user_id": f"synthetic_{split}_fist_subject",
+                }
+            }), encoding="utf-8")
+            image = self.images / "fist" / (key+".jpg")
+            image.parent.mkdir(parents=True, exist_ok=True)
+            image.write_bytes(b"\xff\xd8\xff"+key.encode())
+        ack = self._approve_negative()
+        report = convert(
+            self.annotations, self.images, self.output, self.license,
+            self.mapping, ("one", "palm", "fist"), limit_per_source=1,
+            hard_negative_sources=frozenset({"fist"}), hard_negative_ack=ack,
+        )
+        self.assertEqual(report["selected_boxes_by_class"]["no_gesture"], 3)
+        self.assertEqual(len(report["selected_boxes_by_class"]), 10)
+        row = (self.output / "labels/val/fist/synthetic_val_fist.txt").read_text()
+        self.assertTrue(row.startswith("7 "))
 
     def test_individual_noncommand_hand_is_class_seven(self):
         subject, labels = _check_sample("synthetic", {

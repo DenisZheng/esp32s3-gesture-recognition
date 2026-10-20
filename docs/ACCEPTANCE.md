@@ -33,3 +33,8 @@ For numerical parity, record both intermediate tensor absolute/relative error st
 All ten mapped classes (minimum multiple camera presentations each), idle `no_gesture`, `no_hand`/empty room, non-target classes, second hand in scene, simultaneous different classes, touching/overlapping hands, partial occlusion, distance/scale and variable light; orientation/mirror checks. Record board ID (non-secret), sensor, input resolution, firmware commit, IDF and ESP-DL versions, model SHA256, FPS and p50/p95 latency, free/min heap/PSRAM, crash/restarts, detection class/score/box and reviewer result. All image files and raw video stay local.
 
 Template log: `experiments/templates/experiment.json`. A CI run only validates code/contracts, never substitutes for physical inspection.
+
+
+## P1 hard-negative acceptance addendum
+
+Do **not** accept a data release based merely on a list of ten HaGRID source folders. The 24 other raw categories include command-lookalikes (e.g. `peace` / `stop`) and double-hand composites. A negative class-7 detection must have a **verified hand bbox** and a currently signed source-specific review; unknown or ambiguous hands must cause entire-image rejection. Source-policy digest in private signoff must match committed JSON. Legitimate hand-free `no_hand` samples must have evidence of zero visible hands. The official `two_up -> two` mapping is still provisional and must be adjudicated against licensed `peace` variants before final P1 PASS. These gates cannot be substituted by synthetic CI.

@@ -31,7 +31,7 @@ data/reviews/hagrid-mapping-ack.json         # manually signed / ignored by git
 data/processed/hagrid10_micro/               # derived JPEG and YOLO labels, ignored
 ```
 
-The tool uses the *record's per-hand* `labels`, never assumes that every hand has the source JSON's category. Unknown or compound gestures, missing boxes, invalid coordinates and unreviewed negatives are rejected. Such rejects are included in aggregate counts, without printing identities. It does not yet remap other non-command HaGRID gestures to `no_gesture`; those images are excluded pending case-specific signoff.
+The tool uses the *record's per-hand* `labels`, never assumes that every hand has the source JSON's category. Unknown or compound gestures, missing boxes, invalid coordinates and unreviewed negatives are rejected. Such rejects are included in aggregate counts, without printing identities. It can now map approved additional single-hand sources to `no_gesture` **only after independent, signed, current policy-SHA-bound manual review**; ambiguous lookalikes and compound two-hand sources remain forbidden. See [HARD_NEGATIVES.md](HARD_NEGATIVES.md).
 
 ## Run after the applicable rights/visual gates
 
@@ -101,3 +101,8 @@ Then audit these real locally stored annotations:
 For all ten JSON source classes, choose a distinct **new** output directory, use all default sources, and opt in to a sufficient download cap (e.g. --max-transfer-mib 180). Never silently overwrite; the archive byte size and member CRC32 are checked. Each extracted entry gets a local SHA256 in _provenance.aggregate.json. The archive-wide SHA256 is **unknown**, as only selected entries are downloaded. This is not equivalent to hashing the entire archive.
 
 The extracted JSON still contains personal/subject-related attributes. Never commit, attach as PR artifacts, or run on public GitHub-hosted CI. A valid PDF acknowledgment does **not** waive the separate ten-gesture visual mapping approval needed before moving on to image conversion. The new script's CI tests use synthetic in-memory ZIPs only.
+
+
+## Optional additional hard negatives — never automatic
+
+See [HARD_NEGATIVES.md](HARD_NEGATIVES.md), the [34-source registry](../configs/hagrid_v2_source_policy.json), and the deliberately invalid [local signature template](templates/p1-hard-negative-ack.example.json). The bounded ZIP inspector can now list all official source categories, but **conversion** requires the separate `--hard-negative-sources` and `--hard-negative-ack` flags. Only the seven reviewable single-hand candidates may ever be mapped to output class 7 in this policy revision. The `two_up`/`peace` mapping discrepancy must be resolved with licensed examples before the real ten-class data gate can pass. No real hard-negative review is claimed.

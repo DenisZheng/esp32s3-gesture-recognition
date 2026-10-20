@@ -172,14 +172,30 @@ class VisualReviewPacketTests(unittest.TestCase):
             len(json.loads((self.output / "packet.manifest.json").read_text())["samples"]), 3
         )
 
-    def test_signed_review_verifies_image_integrity_and_tracks_unresolved(self):
+    def test_signed_review_verifies_image_integrity_and_records_no_conflict(self):
         self.packet()
         review = self.sign()
         result = verify_review(self.output, review)
         self.assertEqual(result["sources_checked"], 4)
-        self.assertIn("peace", result["unresolved_sources"])
-        self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS")
+        self.assertEqual(result["unresolved_sources"], [])
+        self.assertEqual(result["potential_command_alias_conflicts"], [])
+        self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_NOT_P1_PASS")
         self.assertTrue(result["still_requires_ten_class_final_signoff"])
+
+    def test_peace_matching_official_two_is_reported_as_alias_conflict(self):
+        self.packet()
+        review = self.sign({"peace": "match"})
+        result = verify_review(self.output, review)
+        self.assertIn("peace", result["potential_command_alias_conflicts"])
+        self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS")
+        self.assertEqual(result["model_outputs_unchanged"], 10)
+
+    def test_uncertain_peace_variant_cannot_be_silently_approved(self):
+        self.packet()
+        review = self.sign({"peace_inverted": "uncertain"})
+        result = verify_review(self.output, review)
+        self.assertIn("peace_inverted", result["potential_command_alias_conflicts"])
+        self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS")
 
     def test_unsigned_template_cannot_be_verified(self):
         self.packet()

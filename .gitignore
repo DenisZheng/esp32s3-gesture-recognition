@@ -66,7 +66,7 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Raw image/video types are prohibited in data; docs diagrams may be tracked.
+# Raw image/video types are prohibited; source-only SVG diagrams can be tracked in docs.
 /data/**/*.jpg
 /data/**/*.jpeg
 /data/**/*.png

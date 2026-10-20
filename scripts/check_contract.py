@@ -27,8 +27,8 @@ def check() -> None:
     assert cfg["negative_background_label"] == "no_hand"
     assert cfg["negative_background_is_detection_class"] is False
     assert cfg["two_hand_joint_box_allowed"] is False
-    assert all(c["review"].startswith("pending") for c in cfg["classes"]), (
-        "No mapping has been visually signed off yet"
+    assert all(c["review"] in {"pending", "pending_visual_confirmation", "approved"} for c in cfg["classes"]), (
+        "Unknown class mapping review state"
     )
 
     text = (ROOT / "configs/hagrid10.yaml").read_text(encoding="utf-8")

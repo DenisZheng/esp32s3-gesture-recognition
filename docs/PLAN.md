@@ -97,3 +97,6 @@ The official HaGRIDv2 catalog has 34 raw sources. [HARD_NEGATIVES.md](HARD_NEGAT
 
 
 **P1-03/P1-04 local review orchestration slice (2026-10-20):** Standalone private annotation downloader was hardened to reject raw-data acquisition in public CI (matching existing JPEG rules). A new one-command workflow (`scripts/p1_review_workflow.py`) creates the four-category `two_up/peace` review package transactionally after local owner license approval, with bounded train-only metadata/JPEG selection and SHA256-bound human review verification. [Operator guide](P1_ONE_CLICK_REVIEW.md). End-to-end synthetic fixtures only; **no real licensed samples used**, P1 signoff/P2 training remain BLOCKED.
+
+
+**P1 official annotation ZIP budget verification:** A metadata-only GitHub Actions run showed that the four train source JSONs occupy 54,388,405 compressed bytes / 323,899,528 uncompressed bytes. This exposed and resolved a real parser defect: an unselected, oversized *other* class previously caused the entire ZIP metadata walk to abort. Per-member caps now apply **only to requested JSONs**, and selected unsafe files still fail closed. Verified by synthetic CI and live metadata-only source inspection; **no individual annotation record or JPEG was downloaded**. [Local runbook](P1_ONE_CLICK_REVIEW.md).

@@ -103,3 +103,15 @@ Verification binds decisions to the SHA256 of the packet manifest, the individua
 - Byte budgets, exact official ZIP64 SHA256 baseline, train-only record selection, per-hand labels and distinct subjects are enforced by the underlying source readers.
 - Directory rollback on missing classes, budget errors, missing license, malformed output, duplicate/symlink inputs, wrong reviewer evidence, or a failed subcommand.
 - The synthetic integration tests deliberately include fictional IDs and fake JPEG-like bytes. **They are not genuine licensed photos or visual evaluation.**
+
+
+### Actual four-source annotation ZIP directory cost (metadata-only check)
+
+On 2026-10-20 a public-metadata-only GitHub Actions run examined the official annotation ZIP's index for `train/{two_up,peace,peace_inverted,two_up_inverted}.json`:
+
+- **4** JSON members, **54,388,405 compressed bytes** (~51.9 MiB)
+- **323,899,528 uncompressed bytes** (~308.9 MiB)
+- Default **80 MiB total annotation network budget** is above the exact compressed bytes, but you need additional local disk/RAM capacity to parse the JSON.
+- [Metadata-only Actions verification](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39429491488)
+
+These figures describe ZIP member metadata and do **not** mean we obtained person images/annotation records, accepted image rights, or completed source mapping.

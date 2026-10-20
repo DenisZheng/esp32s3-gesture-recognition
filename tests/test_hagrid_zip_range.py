@@ -15,6 +15,7 @@ from scripts.hagrid_zip_range import (
 )
 
 
+@patch.dict("os.environ", {"CI": "false", "GITHUB_ACTIONS": "false"})
 class HaGRIDRangeZipTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -99,6 +100,16 @@ class HaGRIDRangeZipTests(unittest.TestCase):
         with self.assertRaises(PreparationError):
             parse_directory(b"PK", len(self.raw_zip))
 
+    def test_ci_fails_before_any_private_annotation_download(self):
+        with patch.dict("os.environ", {"CI": "true", "GITHUB_ACTIONS": "true"}):
+            with patch("scripts.hagrid_zip_range.fetch_directory") as fetch:
+                with patch("scripts.hagrid_zip_range._approval") as signed:
+                    with self.assertRaisesRegex(PreparationError, "forbidden in CI"):
+                        extract(("one",), ("train",), self.root / "no",
+                                self.root / "review.json", 5)
+                    fetch.assert_not_called()
+                    signed.assert_not_called()
+
     def test_unlicensed_extraction_refuses_before_fetch(self):
         with patch("scripts.hagrid_zip_range.fetch_directory") as fake:
             with self.assertRaises(PreparationError):
@@ -147,7 +158,7 @@ class HaGRIDRangeZipTests(unittest.TestCase):
             def __exit__(self, *_): pass
             def read(self, count): return b"abc"
         with patch("scripts.hagrid_zip_range.urllib.request.urlopen", return_value=Dummy()):
-            with self.assertRaises(PreparationError):
+            with self.assertRaisesRegex(PreparationError, "ignored Range"):
                 get_range(0, 9)
 
 

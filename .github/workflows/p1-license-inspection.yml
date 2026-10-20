@@ -24,6 +24,8 @@ jobs:
           wc -c /tmp/hagrid-en_us.pdf
           sha256sum /tmp/hagrid-en_us.pdf
           git hash-object --stdin < /tmp/hagrid-en_us.pdf
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils > /tmp/poppler-install.log
           pdfinfo /tmp/hagrid-en_us.pdf | grep -E 'Pages:|Title:|Creator:|Producer:'
           command -v pdftotext
           pdftotext -layout /tmp/hagrid-en_us.pdf /tmp/hagrid-en_us.txt

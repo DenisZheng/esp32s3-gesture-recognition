@@ -39,5 +39,46 @@ jobs:
               print(f"ZIP64 locator present: yes, ZIP64_EOCD_offset={l_offset}, disk={l_disk}, total_disks={l_disks}")
           else:
               print("ZIP64 locator present: no")
+          if locator<0:
+              raise SystemExit("Expected ZIP64 end record missing")
           print("No archive filenames or image data were output.")
+          PY
+          echo "=== ZIP64 CENTRAL DIRECTORY STRUCTURE (METADATA ONLY) ==="
+          python - <<'PY'
+          import struct,subprocess,collections
+          from pathlib import Path
+          url="https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/hagrid/hagrid_dataset_new_554800/hagrid_dataset/two_up.zip"
+          total=42733450409
+          tail=Path("/tmp/p1-zip-tail").read_bytes()
+          marker=tail.rfind(b"PK\x06\x07")
+          _,_,record_offset,_=struct.unpack_from("<4sIQI",tail,marker)
+          # ZIP64 EOCD is in the already fetched last 64KiB for this archive.
+          start=total-len(tail)
+          fields=struct.unpack_from("<4sQHHIIQQQQ",tail,record_offset-start)
+          _,record_bytes,_,_,disk,cdisk,entries_on_disk,count,cd_bytes,cd_offset=fields
+          print(f"zip64_entries={count}, central_dir_bytes={cd_bytes}, central_dir_offset={cd_offset}")
+          assert 0<count<500000 and 0<cd_bytes<8*1024*1024 and cd_offset+cd_bytes<=record_offset
+          rng=f"{cd_offset}-{cd_offset+cd_bytes-1}"
+          subprocess.run(["curl","-fsSL","--max-time","60","--range",rng,
+                          "--max-filesize","8388608","-o","/tmp/p1-cd.bin",url],check=True)
+          b=Path("/tmp/p1-cd.bin").read_bytes()
+          assert len(b)==cd_bytes
+          pos=0;ext=collections.Counter();dirs=collections.Counter();methods=collections.Counter()
+          zip64_offsets=0
+          for _ in range(count):
+              if b[pos:pos+4]!=b"PK\x01\x02":
+                  raise RuntimeError("bad central dir record")
+              f=struct.unpack_from("<4s6H3I5H2I",b,pos)
+              nl,el,cl=f[10:13]
+              name=b[pos+46:pos+46+nl].decode("utf-8")
+              ext[name.rsplit(".",1)[-1] if "." in name else "none"]+=1
+              dirs["/".join(name.split("/")[:-1]) or "(root)"]+=1
+              methods[f[4]]+=1
+              zip64_offsets+=(f[16]==4294967295)
+              pos+=46+nl+el+cl
+          print(f"parsed_entries={count}, bytes_consumed={pos}, zip64_entry_offsets={zip64_offsets}")
+          print("extension_counts="+str(ext.most_common(6)))
+          print("prefix_counts="+str(dirs.most_common(6)))
+          print("compression_methods="+str(methods))
+          print("No source image payload was downloaded or included in output")
           PY

@@ -65,7 +65,7 @@ Open `data/reviews/packets/two-v1/index.html` locally. It shows the original **p
 
 The packet folder also contains `images/` (small local JPG copies), `packet.manifest.json` (image/file hashes, original per-hand boxes, aggregate selection statistics), and `review.template.json` (intentionally invalid unsigned local form). All are **PRIVATE**. The generated filename never includes the original image key or `user_id`, and metadata fields such as demographics are not serialized. JPEG signature is a sanity check, not successful full-image decode or visual QA.
 
-The tool deterministically samples distinct local people per requested class where possible. It **refuses zero-image categories** and never reads val/test. Output is transactional and must be a new path for every review run.
+The tool first filters annotations to JPEG files **actually staged locally**, so it can pick 3–20 JPGs even when the original JSON describes tens of thousands of images not present on disk. It then samples distinct local people per class where possible. For a positive final mapping match, at least **three** actual images of that source must be reviewed. It **refuses zero-image categories** and never reads val/test. Output is transactional and must be a new path for every review run.
 
 ## 4. Human comparison, record and verify
 

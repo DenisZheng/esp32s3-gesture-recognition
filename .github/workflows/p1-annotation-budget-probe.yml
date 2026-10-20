@@ -6,7 +6,6 @@ permissions:
   contents: read
 jobs:
   metadata-only:
-    if: github.event.head_commit.message == 'test(p1): probe exact four-class annotation ZIP budget'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

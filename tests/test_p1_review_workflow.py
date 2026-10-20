@@ -223,6 +223,20 @@ class LocalReviewWorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(WorkflowError, "cannot be matched"):
             verify(self.workspace, evidence)
 
+    def test_workspace_receipt_rejects_rebased_packet_manifest(self):
+        self.prepare()
+        review = self.sign_fake_review()
+        packet_file = self.workspace / "packet/packet.manifest.json"
+        # A tampered packet and matching rewritten human form must still fail:
+        # the workflow receipt pins the packet byte identity independently.
+        packet_file.write_bytes(packet_file.read_bytes() + b" \n")
+        form = json.loads(review.read_text(encoding="utf-8"))
+        import hashlib
+        form["packet_manifest_sha256"] = hashlib.sha256(packet_file.read_bytes()).hexdigest()
+        review.write_text(json.dumps(form), encoding="utf-8")
+        with self.assertRaisesRegex(WorkflowError, "workspace receipt"):
+            verify(self.workspace, review)
+
     def test_nonexistent_workspace_cannot_verify(self):
         with self.assertRaisesRegex(WorkflowError, "Missing/invalid"):
             verify(self.workspace, self.root / "fictional.json")

@@ -2,9 +2,9 @@
 
 **Research PoC | Single-model ten-class hand gesture recognition with localization | M5Stack CoreS3**
 
-> **Project status: GitHub P0 infrastructure COMPLETE (public repo, Actions PASS, active protected main); P0 class/license evidence still pending. P1 metadata tooling is synthetic-tested; real-data P1 remains BLOCKED by license/visual approval.** The repository contains audited technical design, source pins, data-policy safeguards, offline contract tests, and CI configuration. It **does not** contain a trained model, data, a firmware image, or real-device results.
+> **Project status: GitHub P0 infrastructure COMPLETE; HaGRID custom PDF source has been read and pinned, but owner/legal usage acceptance and 10-class visual signoff remain pending. P1 selective metadata tools are synthetic-tested; no private data or real training is claimed.** The repository contains audited technical design, source pins, data-policy safeguards, offline contract tests, and CI configuration. It **does not** contain a trained model, data, a firmware image, or real-device results.
 
-[中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Input size decision](docs/INPUT_RESOLUTION.md) | [Licenses](docs/THIRD_PARTY.md) | [P1 data tooling](docs/P1_DATA_TOOLING.md)
+[中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Input size decision](docs/INPUT_RESOLUTION.md) | [Licenses](docs/THIRD_PARTY.md) | [P1 data tooling](docs/P1_DATA_TOOLING.md) | [Custom dataset license review](docs/HAGRID_LICENSE_AUDIT.md)
 
 ## Scope
 

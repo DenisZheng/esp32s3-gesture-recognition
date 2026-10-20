@@ -1,8 +1,8 @@
 {
-  "note": "EXAMPLE ONLY; exact custom PDF MUST be read first. Keep signed record local, not in public Git.",
+  "note": "INVALID TEMPLATE: Exact official PDF SHA256 provided for source identity only. The owner/reviewer MUST personally review the terms and fill reviewer/date/accept_terms. Do NOT commit completed acknowledgement.",
   "reviewer": "",
   "reviewed_on": "",
-  "license_pdf_sha256": "",
+  "license_pdf_sha256": "14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22",
   "permitted_scope": "unverified",
   "accept_terms": false,
   "license_reference": "https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/license/en_us.pdf"

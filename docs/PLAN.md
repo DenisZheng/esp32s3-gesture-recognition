@@ -2,7 +2,7 @@
 
 Date: 2026-10-20. **Goal: single-model hand gesture recognition with localization.** Project: `DenisZheng/esp32s3-gesture-recognition`. Baseline: CoreS3 / ESP32-S3 / 8MB PSRAM / IDF 5.4.4 / ESP-DL v3.3.14. Stage gate is sequential: do not enter the next phase until the previous stage has a signed, evidence-backed PASS. An outcome is `DONE` only with artifact, command, version and result. `PENDING` is neither PASS nor FAIL.
 
-**Current P0 outcome: GITHUB INFRASTRUCTURE DONE; RESEARCH GATE PARTIAL.** Public repository, real GitHub commits, green Actions and active main Ruleset `Protect main` (PR + `p0-contract`) were verified via GitHub API on 2026-10-20. The owner's Public-visibility choice supersedes the original Private-repo suggestion. HaGRID custom-license PDF, class visual signoff and real samples are still pending. P1 metadata/converter tooling can proceed independently without datasets; P2 training cannot begin until licensed P1 acceptance.
+**Current P0 outcome: GITHUB INFRASTRUCTURE DONE; RESEARCH GATE PARTIAL.** Public repository, real GitHub commits, green Actions and active main Ruleset `Protect main` (PR + `p0-contract`) were verified via GitHub API on 2026-10-20. The owner's Public-visibility choice supersedes the original Private-repo suggestion. HaGRID custom PDF text is now source-reviewed with a verified SHA256, but owner usage acceptance, class visual signoff and actual sample evidence are still pending. P1 metadata/converter tooling can proceed independently without datasets; P2 training cannot begin until licensed P1 acceptance.
 
 ## P0 — Repository and feasibility (current)
 
@@ -20,7 +20,7 @@ Date: 2026-10-20. **Goal: single-model hand gesture recognition with localizatio
 | P0-10 | Resolve gesture reference shapes `two_up/two`, `palm/five` | Comparison sheet with official gesture figure and independent samples | PENDING (before P1 conversion signoff) |
 | P0-11 | Correct application naming, choose single-model input resolution, update latest stable ESP-DL lock | [INPUT_RESOLUTION](INPUT_RESOLUTION.md), `README`, `upstreams.lock.json` | DONE (source/config review); hardware PENDING |
 
-**P0 remaining exit gates:** Data license rights from actual custom PDF and visual confirmation of ten HaGRID-to-official classes. Public remote, main commits, green GitHub Actions and protected PR + mandatory check are **VERIFIED**. P1 **tooling** implementation uses synthetic tests only and does not constitute licensed data acceptance. Do not declare P0 fully PASS or enter P2 until the outstanding human evidence gates are signed.
+**P0 remaining exit gates:** User/legal acceptance of the now-reviewed custom license and visual confirmation of ten HaGRID-to-official classes. Public remote, main commits, green GitHub Actions and protected PR + mandatory check are **VERIFIED**. P1 **tooling** implementation uses synthetic tests only and does not constitute licensed data acceptance. Do not declare P0 fully PASS or enter P2 until the outstanding human evidence gates are signed.
 
 The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git SHA. Before upgrading again, file a compatibility-review PR against the updated upstream release. Training and image-shape selection remain experimental; [224x224 rationale](INPUT_RESOLUTION.md) is reviewed at P0, not yet validated on device.
 
@@ -35,7 +35,7 @@ The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git 
 7. **P1-07 Validate:** each YOLO row exactly `cls cx cy w h`, normalized to [0,1], strictly positive box within image bounds, id 0-9; zero-line label only for truly audited hand-free images. Review random stratified annotated montages privately, manually sign off multiple hands, natural poses, occlusions and ignored other gestures.
 8. **P1-08 Manifest/evidence:** counts per split/class/subjects, duplicate-file SHA256 checks (within accessible subset), source license, sample selection method, conversion hash, rejects and QA log. Only share aggregate anonymized metrics.
 
-**P1 tooling (PR):** `scripts/hagrid_p1.py`, `tests/test_hagrid_p1.py` and [P1 data runbook](P1_DATA_TOOLING.md) implement offline synthetic-tested metadata audit + guarded micro-sampling. No real HaGRID bytes were acquired. **P1 PASS remains blocked** by exact license PDF, signed visual mapping, real data and private visual QA. See runbook for restrictions and evidence. No mAP required yet.
+**P1 tooling (PR #1, followed by license and selective ZIP tooling):** `scripts/hagrid_p1.py`, `tests/test_hagrid_p1.py` and [P1 data runbook](P1_DATA_TOOLING.md) implement offline synthetic-tested metadata audit + guarded micro-sampling. No real HaGRID bytes were acquired. **P1 PASS remains blocked** by exact license PDF, signed visual mapping, real data and private visual QA. See runbook for restrictions and evidence. No mAP required yet.
 
 ## P2 — Scratch PyTorch training (PENDING)
 

@@ -13,11 +13,11 @@
 
 ## Research/license stop gate
 
-The dataset README says **"variant of CC BY-SA 4.0"**, pointing to the custom [`license/en_us.pdf`](https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/license/en_us.pdf). The custom PDF **has not yet been completely read and approved in this project**. This is a **BLOCKER to real dataset acquisition/conversion**, and a public GitHub repository does not waive license or privacy duties.
+The dataset README says **"variant of CC BY-SA 4.0"**, pointing to the custom [`license/en_us.pdf`](https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/license/en_us.pdf). The official five-page custom PDF **was completely extracted and source-reviewed on 2026-10-20**, but a signed owner/legal authorization for data use is still PENDING. This unsigned authorization is a **BLOCKER to real dataset acquisition/conversion**, and a public GitHub repository does not waive license or privacy duties.
 
 The tool will run `audit` over **user-provided local metadata** without fetching anything. Actual `convert` **requires two local files**, both outside Git:
 - `data/reviews/hagrid-license-ack.json`: a *real* downloaded PDF SHA256, review author/date, confirmed research-use scope and express acceptance of exact terms. This is an attestation, **not independent legal clearance**.
-- `data/reviews/hagrid-mapping-ack.json`: visual review of **all 10** output mappings against [ESP-DL v3.3.14 gesture reference](https://github.com/espressif/esp-dl/blob/v3.3.14/examples/hand_gesture_recognition/gestures.png) and licensed HaGRID samples, especially `two_up -> two` and `palm -> five`. Each row requires an approved, dated, signed sample review. No automatic approval is provided in Git.
+- `data/reviews/hagrid-mapping-ack.json`: visual review of **all 10** output mappings against [ESP-DL v3.3.14 gesture reference](https://github.com/espressif/esp-dl/blob/v3.3.14/examples/hand_gesture_recognition/gestures.png) and licensed HaGRID samples, especially `two_up -> two` and `palm -> five`. Each row requires an approved, dated, signed sample review. No automatic approval is provided in Git. The verified PDF SHA256 is 14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22; the local review must reference the actual PDF. See HAGRID_LICENSE_AUDIT.md.
 
 See `docs/templates/` for **unsigned illustrative templates**, deliberately invalid until completed from actual evidence. Do **not** commit signed review files.
 
@@ -73,3 +73,31 @@ python3 -m scripts.hagrid_p1 convert \
 6. Establish P1 evidence + acceptance thresholds *before* P2 experiments.
 
 Until these are verified, **P1 is PARTIAL**, and **P2 training must not start**.
+
+
+## Bounded metadata ZIP reader — added in P1-01 follow-up
+
+Official annotation ZIP is 719041314 bytes, but HTTP 206 Range works. A last-64KiB directory request identified exactly 30 ten-class train/val/test JSON files totaling 171848608 compressed bytes. Neither the full archive nor any raw annotations were downloaded for this public audit.
+
+**Safe remote ZIP directory inspection (no raw metadata fetched):**
+
+    python3 -m scripts.hagrid_zip_range inspect --sources no_gesture
+    python3 -m scripts.hagrid_zip_range inspect
+
+**After signed research-license approval, on your own workstation ONLY** (default 5 MiB transfer cap; approximately 1.4 MB for three no_gesture JSONs):
+
+    python3 -m scripts.hagrid_zip_range extract \
+      --sources no_gesture \
+      --output data/raw/hagrid_annotations \
+      --license-ack data/reviews/hagrid-license-ack.json \
+      --max-transfer-mib 5
+
+Then audit these real locally stored annotations:
+
+    python3 -m scripts.hagrid_p1 audit \
+      --annotations data/raw/hagrid_annotations \
+      --sources no_gesture
+
+For all ten JSON source classes, choose a distinct **new** output directory, use all default sources, and opt in to a sufficient download cap (e.g. --max-transfer-mib 180). Never silently overwrite; the archive byte size and member CRC32 are checked. Each extracted entry gets a local SHA256 in _provenance.aggregate.json. The archive-wide SHA256 is **unknown**, as only selected entries are downloaded. This is not equivalent to hashing the entire archive.
+
+The extracted JSON still contains personal/subject-related attributes. Never commit, attach as PR artifacts, or run on public GitHub-hosted CI. A valid PDF acknowledgment does **not** waive the separate ten-gesture visual mapping approval needed before moving on to image conversion. The new script's CI tests use synthetic in-memory ZIPs only.

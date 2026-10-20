@@ -117,6 +117,8 @@ class HTTPRange:
                 ):
                     raise ImageRangeError("Archive last-modified changed during extraction")
                 result = res.read(length + 1)
+        except ImageRangeError:
+            raise  # Preserve safety failure: HTTP 200/invalid Range must be explicit.
         except (OSError, ValueError) as exc:
             raise ImageRangeError("Image archive HTTP byte-range read failed") from exc
         if len(result) != length:
@@ -288,7 +290,7 @@ def inspect(source: str, transport: HTTPRange | None = None):
         raise ImageRangeError("Source not in approved four-way P1 contrast group")
     if transport is None:
         transport = HTTPRange(IMAGE_URLS[source], PINNED_SIZES.get(source))
-    tail = transport.get(transport.size - TAIL_BYTES, transport.size - 1)
+    tail = transport.get(max(0, transport.size - TAIL_BYTES), transport.size - 1)
     offset, size, count = parse_zip64_footer(tail, transport.size)
     central = transport.get(offset, offset + size - 1)
     entries = parse_image_index(central, count, source)

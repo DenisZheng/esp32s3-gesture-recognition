@@ -44,6 +44,12 @@ def offline_plan() -> dict:
         "stage": "P1-03/P1-04",
         "source_split": "train",
         "source_categories": list(SOURCES),
+        "official_train_json_compressed_bytes": 54_388_405,
+        "official_train_json_uncompressed_bytes": 323_899_528,
+        "official_train_json_size_evidence": (
+            "GitHub Actions metadata-only ZIP directory inspection; "
+            "no annotation content or personal JPG downloaded"
+        ),
         "model_input": [224, 224],
         "model_output_classes": 10,
         "requires_real_owner_license_acceptance": True,

@@ -34,3 +34,8 @@ Official HaGRID annotations contain `bboxes` as normalized top-left `x, y, width
 ## Converter decision
 
 Reference [`hagrid_to_yolo.py`](https://github.com/hukenovs/hagrid/blob/master/converters/hagrid_to_yolo.py), but treat it as **unverified for this use**. It maps IDs by the order of its `targets` list, and in gestures mode can choose `united_bbox`/`united_label` for compound gestures. Therefore a project-specific auditable conversion / split-validator is a P1 deliverable. P0 only provides the label contract and offline synthetic tests.
+
+
+## Additional noncommand hands — signed, not inferred
+
+The pinned [34-source policy](../configs/hagrid_v2_source_policy.json) classifies the 24 extra sources as **7 single-hand review candidates + 10 visually confusable quarantined sources + 7 compound quarantined sources**. No extra source is automatically a `no_gesture`. Selected single-hand candidates such as `fist` may be mapped to index 7 with a **real hand bbox**, only with signed local source-policy-hash-bound review; an unapproved second hand forces rejecting the **entire image**, not quietly dropping its bbox. `peace`, `three2`, `stop` and compounds cannot enter this mapping under the current policy. Empty `no_hand` negatives require separately audited truly hand-free images. See [HARD_NEGATIVES.md](HARD_NEGATIVES.md).

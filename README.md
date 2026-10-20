@@ -74,3 +74,10 @@ GitHub repo and `Protect main` ruleset are active; use feature branches and PRs 
 | P5 | Compare one-model vs official two-model pipeline | PENDING |
 
 See [Acceptance](docs/ACCEPTANCE.md) for exact evidence definitions.
+
+
+## P1 source selection — important distinction
+
+The pinned HaGRIDv2 corpus has **34 original sources** (33 gesture categories plus no_gesture), but our single ESPDet-Pico model still has **10 output classes at 224x224**. Remaining classes must **not all become negatives**. The [review-only source policy](docs/HARD_NEGATIVES.md) partitions extra sources into seven single-hand candidates requiring signed licensed-image approval, ten confusing lookalikes held out, and seven compound two-hand sources held out.
+
+**Provisional mapping risk:** ESP-DL `two` looks like a V sign while HaGRID `two_up` shows closer fingers; HaGRID `peace` may be a better match and must NOT be trained as class-7 `no_gesture` without semantic adjudication. No real visual mapping approval or training experiment is claimed.

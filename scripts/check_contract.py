@@ -50,6 +50,17 @@ def check() -> None:
     assert next(d for d in deps if d["id"] == "esp-dl")["ref"] == "v3.3.14"
     assert next(d for d in deps if d["id"] == "esp-dl")["commit"] == "5acd1c9992af4afb0fa80c221a676982b11381b8"
     assert next(d for d in deps if d["id"] == "esp-idf")["ref"] == "v5.4.4"
+    taxonomy = json.loads((ROOT / "configs/hagrid_v2_source_policy.json").read_text(encoding="utf-8"))
+    groups = ("primary_sources", "reviewable_noncommand_candidates", "lookalike_quarantine", "compound_quarantine")
+    group_sets = [set(taxonomy[k]) for k in groups]
+    assert [len(taxonomy[k]) for k in groups] == [10, 7, 10, 7]
+    assert len(taxonomy["raw_sources"]) == len(set(taxonomy["raw_sources"])) == 34
+    assert set.union(*group_sets) == set(taxonomy["raw_sources"])
+    assert sum(len(s) for s in group_sets) == 34
+    assert group_sets[0] == set(SOURCES)
+    assert {"peace", "peace_inverted", "two_up_inverted"} <= group_sets[2]
+    assert taxonomy["model_class_count"] == 10
+    assert taxonomy["no_hand_is_model_class"] is False
     exp = json.loads((ROOT / "experiments/templates/experiment.json").read_text(encoding="utf-8"))
     assert exp["num_classes"] == 10
     assert exp["metrics"]["map50"] is None, "Never invent experiment metrics"

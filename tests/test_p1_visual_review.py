@@ -102,6 +102,26 @@ class VisualReviewPacketTests(unittest.TestCase):
         self.assertIn("left:10.00000%;top:20.00000%", page)
         self.assertNotIn("THIS IS INVALID TEST JSON", private)
 
+    def test_sparse_local_jpegs_selected_from_large_annotation_index(self):
+        path = self.annotations / "train/two_up.json"
+        records = json.loads(path.read_text(encoding="utf-8"))
+        for i in range(900):
+            records[f"UNSTAGED_image_{i:05}"] = {
+                "user_id": f"UNSTAGED_person_{i}",
+                "bboxes": [[0.1, 0.2, 0.3, 0.4]],
+                "labels": ["two_up"],
+                "united_bbox": None,
+                "united_label": None,
+            }
+        path.write_text(json.dumps(records), encoding="utf-8")
+        report = self.packet(("two_up",), per_source=4)
+        self.assertEqual(report["counts_by_source"]["two_up"], 4)
+        stats = json.loads(
+            (self.output / "packet.manifest.json").read_text(encoding="utf-8")
+        )["statistics"]["two_up"]
+        self.assertEqual(stats["annotation_without_local_jpeg"], 900)
+        self.assertNotIn("UNSTAGED_person", (self.output / "index.html").read_text())
+
     def test_packet_is_deterministic_with_same_seed(self):
         first = self.packet()
         second = build_packet(

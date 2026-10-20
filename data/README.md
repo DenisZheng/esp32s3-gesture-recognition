@@ -12,3 +12,6 @@ data/raw/hagrid_v2/       # local licensed subset only
 ```
 
 Only hand-free, fully audited images may have empty `.txt` labels. Uncertain/missing hand labels => reject or manual review, NOT treat as no_hand.
+
+
+P1 audit/guarded micro-conversion: [docs/P1_DATA_TOOLING.md](../docs/P1_DATA_TOOLING.md). No automatic downloads; signed license and ten visual mappings are required before local media conversion. Source annotation layout is `data/raw/hagrid_annotations/{train,val,test}/{source}.json`, and source images are `data/raw/hagrid_dataset/{source}/{stem}.jpg`. Only aggregate manifests may be cited publicly.

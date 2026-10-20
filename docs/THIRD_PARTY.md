@@ -1,6 +1,6 @@
 # Third-party authorization and commercial-risk inventory
 
-**Research PoC ONLY, commercial clearance is currently BLOCKED.** This is a source register, not a legal opinion or permission to ship. Private-repo status does not avoid AGPL or dataset license obligations. A separately reviewed license / provenance matrix is required before distributing firmware, weights, training code, images or a commercial product.
+**Research PoC ONLY, commercial clearance is currently BLOCKED.** This is a source register, not a legal opinion or permission to ship. Public visibility does not authorize third-party image redistribution or settle AGPL / dataset license obligations. A separately reviewed license / provenance matrix is required before distributing firmware, weights, training code, images or a commercial product.
 
 | Component | Source | Observed license / state | Research usage & commercial concern |
 |---|---|---|---|

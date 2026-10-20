@@ -16,9 +16,9 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 | R10 | M | Small/distant fingers disappear at 224x224; nohand false positives | Per-class/scale/occlusion metrics, controlled augment and resolution ablations | PENDING |
 | R11 | M | CoreS3 sensor formats/orientation/mirror and ESP-DL RGB565 format differ | P4 pixel parity per actual camera sensor, not on computer-only images | PENDING |
 | R12 | M | Upstream `ultralytics>=8.3.112` and ESP-PPQ git unpinned can drift; `ESPDetect` changed signatures | `upstreams.lock.json`; first smoke-test exact Python env then pin dependency versions in tested lock | PENDING |
-| R13 | M | Current `gh` CLI absent; GitHub connector cannot create repo; branch ruleset also not writable via connector | User manually creates empty Private repo, then use GitHub connector for file commit, PR, checks; user protects main | BLOCKED |
+| R13 | M | GitHub connector cannot create repos or write rulesets | Owner created Public repo, authorized connector and enabled Protect main; verified via API | MITIGATED; remote/CI/ruleset DONE |
 | R14 | M | Firmware build or .espdl export mistaken for model verification | Strict evidence ladder: PyTorch -> ONNX -> quantized -> board fixed image -> live camera | Controlled by acceptance plan |
-| R15 | M | Model weights/data caches leak through Git, Actions artifacts or logs | `.gitignore` + tracked-file policy script + minimal no-data CI; manual review for screenshots | Guard provided; remote CI PENDING |
+| R15 | M | Model weights/data caches leak through Git, Actions artifacts or logs | `.gitignore` + tracked-file policy script + minimal no-data CI; manual review for screenshots | Guard implemented; GitHub CI PASS; continued manual data hygiene required |
 | R16 | M | Off-target model-size/CPU claims inferred from single-class cat 126.2ms | Measure ten-class CoreS3 model; report net latency and end-to-end camera FPS | PENDING |
 | R17 | M | P1 source semantic mismatch `two_up->two` and `palm->five` | Before conversion signoff official gesture picture vs independent HaGRID samples | PENDING |
 | R18 | M | HaGRID git commit does not identify dataset image/annotation archives | Local SHA256 dataset manifests, clear dataset release and download URLs | PENDING |

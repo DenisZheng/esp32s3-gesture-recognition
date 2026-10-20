@@ -1,16 +1,16 @@
-# One-time GitHub setup (minimal user actions)
+# GitHub onboarding — completed on 2026-10-20
 
-P0 local assets are ready (including recognition naming, ESP-DL v3.3.14 lock and 224x224 size decision), but the connected GitHub App exposes no repository-creation action and the current workspace has no `gh` binary. Therefore there is **no remote repo and no remote commit**, and the following is the shortest legitimate manual unblock.
+- Repository: https://github.com/DenisZheng/esp32s3-gesture-recognition
+- Visibility: **Public**, explicitly approved by repository owner.
+- Default branch: `main`; initial source/document history imported through GitHub connector.
+- Actions: `.github/workflows/p0-ci.yml`, mandatory status context **`p0-contract`**, verified green on `main`.
+- Active Ruleset: [Protect main](https://github.com/DenisZheng/esp32s3-gesture-recognition/rules/25458714). Direct API inspection confirmed target default branch, no bypass actors, deletion and non-fast-forward blocked, PR required, review-thread resolution, linear history, mandatory `p0-contract` with strict up-to-date checking, zero required human approvals.
+- GitHub connector has admin/push access to this existing repository; **no ruleset administrative write action is available**, but owner completed setup via GitHub UI.
 
-1. Open **https://github.com/new**. Owner: `DenisZheng`. Repository name: `esp32s3-gesture-recognition`. Description: `Self-trained single-model 10-class hand gesture recognition with localization on ESP32-S3 using ESPDet-Pico and HaGRID.` Choose **Private**. **Do not** initialize README, `.gitignore` or license; no Fork. Click **Create repository**.
-2. Ensure the ChatGPT GitHub connection has access to the new Private repo (if the App is configured for selected repositories, add this repository to the installation). Then in chat request importing the P0 scaffold through the GitHub connector. The GitHub connector supports writing files, commits, branches and PRs **to existing repositories**. If instead pushing the ZIP locally, extract the ZIP with its `.git` directory, then in the extracted root execute:
+## Future changes
 
-```bash
-git remote add origin https://github.com/DenisZheng/esp32s3-gesture-recognition.git
-git push -u origin main
-```
-
-3. After Actions produces a green P0 check, open repository **Settings -> Rules -> Rulesets -> New branch ruleset** (or branch protection if the plan/UI differs). Target `main`; require pull request before merge, prevent force pushes and branch deletions; require the exact check `p0-contract` only after it appears on GitHub and set it mandatory; optionally require conversation resolution. Keep pull-request bypass rules minimal. The GitHub connector lacks an administrative write action for rulesets, so this needs GitHub UI/admin rights.
-4. Verify `Settings -> General` reports `Private`, branch list shows `main`, **Actions** shows `P0 offline guards` green, and direct push to `main` is blocked. Record verified GitHub commit SHA and CI run URL; then P0 can transition from BLOCKED once its license risk decision and class policy are documented.
-
-**Do not give a fabricated GitHub URL as a live repo**. `https://github.com/DenisZheng/esp32s3-gesture-recognition` is the **intended** URL until GitHub `get_repo` successfully resolves it.
+1. Create topic branch from the latest `main` (e.g. `feat/p1-...`).
+2. Commit source/document/test changes to the topic branch, not `main`.
+3. Open PR, ensure `p0-contract` (and any future specific jobs) completes successfully.
+4. Merge with a linear-history-compatible method (Squash or Rebase); use real experiment evidence for human-only P1–P4 gates.
+5. Do not treat passing source CI as training, license, hardware or data acceptance.

@@ -1,0 +1,77 @@
+{
+  "note": "EXAMPLE ONLY; replace with PRIVATE evidence under data/reviews after actual visual review. Do not commit accepted reviews.",
+  "reviewer": "",
+  "reviewed_on": "",
+  "classes": [
+    {
+      "source": "one",
+      "output": "one",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "two_up",
+      "output": "two",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "three",
+      "output": "three",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "four",
+      "output": "four",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "palm",
+      "output": "five",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "like",
+      "output": "like",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "ok",
+      "output": "ok",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "no_gesture",
+      "output": "no_gesture",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "call",
+      "output": "call",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    },
+    {
+      "source": "dislike",
+      "output": "dislike",
+      "approved": false,
+      "samples_reviewed": 0,
+      "official_reference_checked": false
+    }
+  ]
+}

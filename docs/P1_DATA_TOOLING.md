@@ -111,3 +111,8 @@ See [HARD_NEGATIVES.md](HARD_NEGATIVES.md), the [34-source registry](../configs/
 ## P1-03 visual mapping comparison packet
 
 Run the local-only, license-gated [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md) procedure to generate a **train-split** HTML comparison sheet with per-hand bounding boxes, multi-hand flags and a hashed private human review form. No real photos were acquired or approved in CI.
+
+
+## Private ZIP64 JPEG selection (new P1-04 tooling)
+
+[docs/P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) explains how to retrieve **only 3–20 licensed source JPEGs per class** by HTTP Range from 40+GB ZIP64 archives, using the four-way `two_up`, `peace`, `peace_inverted`, `two_up_inverted` comparison. No full image ZIP was downloaded in the public CI probe, and no actual JPEG has been acquired by this project yet. `scripts/hagrid_image_zip64.py` requires the real owner-signed HaGRID license record, refuses actual CI downloads, checks ZIP64 offsets and CRC32, and writes only ignored local output.

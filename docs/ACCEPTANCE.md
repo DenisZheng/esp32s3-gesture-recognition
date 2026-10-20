@@ -43,3 +43,8 @@ Do **not** accept a data release based merely on a list of ten HaGRID source fol
 ### P1-03 licensed visual evidence
 
 A local HTML contact sheet can support mapping signoff only when licensed real train images, sufficient class/alias comparisons, verified per-hand boxes and human-reviewed signatures exist. The new `scripts/p1_visual_review.py` refuses test images, binds image integrity and produces pending evidence forms, but synthetic CI does not constitute semantic, legal, dataset or device PASS. See [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md).
+
+
+### P1-04 ZIP64 image acquisition evidence
+
+Index-only remote smoke tests establish that a 42.73 GB archive supports ranged metadata reads, but **do not prove real JPEG extraction or subject rights**. The local-only extractor must verify immutable/unchanged archive byte range, ZIP64 offset and filenames, CRC32, JPEG signature, SHA256 and research-license approval, and preserve its ignored manifest. A fully decoded/visually checked sample with reviewer decisions is required before P1 PASS. See [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md).

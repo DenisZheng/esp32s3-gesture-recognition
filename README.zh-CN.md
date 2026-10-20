@@ -39,3 +39,6 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 
 
 **P1-03 本地视觉验收工具：** 已增加 HTML 对照页，展示 `two_up`、`peace` 等手势的逐手检测框，并生成图片哈希绑定的待签核记录；只使用训练划分、不读取测试集、无需向公共 GitHub 上传真实图片。说明见 [P1_VISUAL_REVIEW.md](docs/P1_VISUAL_REVIEW.md)。
+
+
+**P1-04 数据下载优化：** 已实测 HaGRIDv2 的 `two_up.zip` 约 42.73 GB，索引含 30,688 张 JPEG。新增 ZIP64 按字节提取工具，可在实际授权后仅选取训练集少量图片供本地十类映射验收，无需下载整个类别压缩包。公开 GitHub CI 仅检查元数据，未下载人物图片。参见 [P1_IMAGE_ZIP64.md](docs/P1_IMAGE_ZIP64.md)。

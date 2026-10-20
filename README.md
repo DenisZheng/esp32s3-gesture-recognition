@@ -84,3 +84,6 @@ The pinned HaGRIDv2 corpus has **34 original sources** (33 gesture categories pl
 
 
 For P1-03 class-adjudication evidence, see the [private HTML visual mapping review workflow](docs/P1_VISUAL_REVIEW.md). The tool uses only licensed train images, never downloads photos or views held-out test images, and cannot replace owner/legal acceptance or human signoff.
+
+
+The [selective HaGRID ZIP64 JPEG workflow](docs/P1_IMAGE_ZIP64.md) allows an **authorized local** reviewer to stage a few train JPEGs via byte-range reads instead of downloading the full 40+GB per-class archives. Official `two_up.zip` metadata was tested in GitHub Actions; no personal images were downloaded, and owner license acceptance and real JPG QA are still pending.

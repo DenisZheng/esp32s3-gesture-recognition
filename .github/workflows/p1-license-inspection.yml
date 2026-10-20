@@ -36,4 +36,24 @@ jobs:
           curl -sSIL --retry 1 --max-time 25 \
             "https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/hagrid_v2/annotations_with_landmarks/annotations.zip" \
             | grep -iE '^HTTP/|^content-length:|^accept-ranges:|^content-type:|^content-disposition:' || true
+          echo "=== ZIP central directory range probe (max 128 KiB) ==="
+          if curl -fsSL --range '-65536' --max-filesize 131072 --max-time 30 \
+            -D /tmp/zip-header.txt -o /tmp/zip-tail.bin \
+            "https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/hagrid_v2/annotations_with_landmarks/annotations.zip"; then
+            grep -iE '^HTTP/|^content-range:|^content-length:' /tmp/zip-header.txt || true
+            wc -c /tmp/zip-tail.bin
+            python - <<'PY'
+          from pathlib import Path
+          import struct
+          b = Path("/tmp/zip-tail.bin").read_bytes()
+          p = b.rfind(b"PK\x05\x06")
+          if p < 0:
+              raise SystemExit("No ZIP EOCD found in last 64 KiB")
+          signature, disk, disk_cd, n_on_disk, entries, cd_size, cd_offset, comment_size = struct.unpack_from("<4s4H2IH", b, p)
+          print(f"ZIP entries={entries}, central_directory_size={cd_size}, offset={cd_offset}")
+          print(f"Need additional central directory range request: {cd_size > len(b)-p}")
+          PY
+          else
+            echo "Range unsupported or archive response exceeded 128KiB; no bulk download performed."
+          fi
           rm -f /tmp/hagrid-en_us.pdf /tmp/hagrid-en_us.txt

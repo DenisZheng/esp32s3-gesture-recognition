@@ -51,7 +51,29 @@ jobs:
               raise SystemExit("No ZIP EOCD found in last 64 KiB")
           signature, disk, disk_cd, n_on_disk, entries, cd_size, cd_offset, comment_size = struct.unpack_from("<4s4H2IH", b, p)
           print(f"ZIP entries={entries}, central_directory_size={cd_size}, offset={cd_offset}")
-          print(f"Need additional central directory range request: {cd_size > len(b)-p}")
+          length = 719041314  # verified HTTP Content-Range total
+          start = length - len(b)
+          if cd_offset < start or cd_offset + cd_size > start + len(b):
+              raise SystemExit("Central directory not fully in bounded tail response")
+          p = cd_offset - start
+          candidates = {"one", "two_up", "three", "four", "palm", "like", "ok",
+                        "no_gesture", "call", "dislike"}
+          relevant = []
+          for _ in range(entries):
+              fields = struct.unpack_from("<4s6H3I5H2I", b, p)
+              if fields[0] != b"PK\x01\x02":
+                  raise SystemExit("Malformed central directory entry")
+              length_name, length_extra, length_comment = fields[10:13]
+              name = b[p+46:p+46+length_name].decode("utf-8")
+              source = name.rsplit("/", 1)[-1].removesuffix(".json")
+              if name.endswith(".json") and source in candidates:
+                  relevant.append((name, fields[8], fields[9], fields[16], fields[4]))
+              p += 46 + length_name + length_extra + length_comment
+          print(f"Ten-class relevant JSON entries: {len(relevant)}")
+          for name, compressed, original, offset, method in sorted(relevant):
+              print(f"ENTRY {name} compressed={compressed} uncompressed={original} offset={offset} method={method}")
+          print("Relevant compressed bytes:",sum(x[1] for x in relevant))
+
           PY
           else
             echo "Range unsupported or archive response exceeded 128KiB; no bulk download performed."

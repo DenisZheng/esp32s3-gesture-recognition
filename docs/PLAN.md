@@ -94,3 +94,6 @@ The official HaGRIDv2 catalog has 34 raw sources. [HARD_NEGATIVES.md](HARD_NEGAT
 
 
 **P1-04 four-archive follow-up:** All four official numeral-two contrast archives passed actual ZIP64 directory parsing on public metadata; archived byte length and index SHA256 are pinned, and a missing/mismatched digest now blocks local extraction. Live evidence: [additional-source CI run](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39420065430). **No real JPGs downloaded**; still no signed mapping P1 PASS or P2 permission.
+
+
+**P1-03/P1-04 local review orchestration slice (2026-10-20):** Standalone private annotation downloader was hardened to reject raw-data acquisition in public CI (matching existing JPEG rules). A new one-command workflow (`scripts/p1_review_workflow.py`) creates the four-category `two_up/peace` review package transactionally after local owner license approval, with bounded train-only metadata/JPEG selection and SHA256-bound human review verification. [Operator guide](P1_ONE_CLICK_REVIEW.md). End-to-end synthetic fixtures only; **no real licensed samples used**, P1 signoff/P2 training remain BLOCKED.

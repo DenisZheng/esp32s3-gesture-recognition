@@ -22,6 +22,7 @@ from scripts.data_contract import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+OFFICIAL_LICENSE_SHA256 = "14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22"
 SPLITS = ("train", "val", "test")
 SAFE_NAME = re.compile(r"[A-Za-z0-9_-]+")
 HEX_SHA = re.compile(r"[a-f0-9]{64}")
@@ -57,7 +58,7 @@ def _approval(path: Path, kind: str) -> dict:
         if (
             not isinstance(sha, str)
             or not HEX_SHA.fullmatch(sha)
-            or len(set(sha)) == 1
+            or sha != OFFICIAL_LICENSE_SHA256
             or doc.get("permitted_scope") != "research_only"
             or doc.get("accept_terms") is not True
         ):

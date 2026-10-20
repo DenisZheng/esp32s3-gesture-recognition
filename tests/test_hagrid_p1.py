@@ -88,6 +88,42 @@ class HaGRIDP1Tests(unittest.TestCase):
         self.assertNotIn("synthetic_subject", aggregate)
         self.assertNotIn("never disclose", aggregate)
 
+    def test_multiple_independent_hands_have_separate_labels(self):
+        self._rewrite("train", "one", lambda item: item.update({
+            "bboxes": [
+                [0.05, 0.10, 0.30, 0.35],
+                [0.60, 0.50, 0.20, 0.20],
+            ],
+            "labels": ["one", "no_gesture"],
+        }))
+        self._convert()
+        rows = (self.output / "labels/train/one/synthetic_train_one.txt").read_text().splitlines()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([int(row.split()[0]) for row in rows], [0, 7])
+
+    def test_hand_without_class_and_boolean_bbox_rejected(self):
+        self._rewrite("train", "one", lambda item: item.update({"labels": ["no_hand"]}))
+        self._rewrite("val", "one", lambda item: item.update({
+            "bboxes": [[False, 0.1, 0.3, 0.3]]
+        }))
+        result = audit(self.annotations, self.sources)
+        self.assertEqual(result["rejected_by_split"]["train"], 1)
+        self.assertEqual(result["rejected_by_split"]["val"], 1)
+
+    def test_untrusted_mapping_approval_types_fail_closed(self):
+        doc = json.loads(self.mapping.read_text())
+        doc["classes"][0]["samples_reviewed"] = "three"
+        self.mapping.write_text(json.dumps(doc))
+        with self.assertRaises(PreparationError):
+            self._convert()
+
+    def test_nonexistent_calendar_date_fails_closed(self):
+        doc = json.loads(self.license.read_text())
+        doc["reviewed_on"] = "2026-99-99"
+        self.license.write_text(json.dumps(doc))
+        with self.assertRaises(PreparationError):
+            self._convert()
+
     def test_license_ack_required(self):
         self.license.unlink()
         with self.assertRaises(PreparationError):

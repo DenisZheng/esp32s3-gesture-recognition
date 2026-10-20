@@ -12,6 +12,7 @@ import json
 import re
 import shutil
 import tempfile
+from datetime import date
 from collections import Counter
 from pathlib import Path
 
@@ -45,10 +46,12 @@ def _approval(path: Path, kind: str) -> dict:
     doc = _load_json(path)
     if not isinstance(doc.get("reviewer"), str) or not doc["reviewer"].strip():
         raise PreparationError(f"{kind}: reviewer required")
-    if not isinstance(doc.get("reviewed_on"), str) or not re.fullmatch(
-        r"\d{4}-\d{2}-\d{2}", doc["reviewed_on"]
-    ):
-        raise PreparationError(f"{kind}: review date required")
+    if not isinstance(doc.get("reviewed_on"), str):
+        raise PreparationError(f"{kind}: ISO review date required")
+    try:
+        date.fromisoformat(doc["reviewed_on"])
+    except ValueError as exc:
+        raise PreparationError(f"{kind}: valid ISO review date required") from exc
     if kind == "license":
         sha = doc.get("license_pdf_sha256")
         if (
@@ -68,10 +71,16 @@ def _approval(path: Path, kind: str) -> dict:
         for item in rows:
             if not isinstance(item, dict):
                 raise PreparationError("Malformed mapping review")
-            key = (item.get("source"), item.get("output"))
+            source, output = item.get("source"), item.get("output")
+            review_count = item.get("samples_reviewed")
+            if (
+                not isinstance(source, str) or not isinstance(output, str)
+                or type(review_count) is not int or review_count < 1
+            ):
+                raise PreparationError("Malformed or incomplete mapping approval")
+            key = (source, output)
             if (
                 key not in expected or key in found or item.get("approved") is not True
-                or item.get("samples_reviewed", 0) < 1
                 or item.get("official_reference_checked") is not True
             ):
                 raise PreparationError("One or more visual class mappings are unreviewed")

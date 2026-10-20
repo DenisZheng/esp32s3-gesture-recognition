@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import struct
 import tempfile
@@ -301,6 +302,7 @@ def inspect(source: str, transport: HTTPRange | None = None):
         "zip64_entries": count,
         "jpeg_entries": len(entries),
         "central_directory_bytes": size,
+        "central_directory_sha256": hashlib.sha256(central).hexdigest(),
     }
 
 
@@ -308,6 +310,11 @@ def extract(source: str, annotations: Path, output: Path, license_ack: Path,
             per_source: int = 6, max_transfer_mib: int = 80,
             seed: str = "p1-visual-review-v1", transport: HTTPRange | None = None):
     """Read a tiny deterministic train-only subset. Atomic, never overwrite."""
+    # CI uses injected synthetic transports for tests, but may never acquire
+    # real person media with network requests or generate public artifacts.
+    if transport is None and (os.environ.get("GITHUB_ACTIONS") == "true"
+                              or os.environ.get("CI") == "true"):
+        raise ImageRangeError("Real HaGRID JPG extraction is forbidden in CI")
     try:
         _approval(license_ack, "license")
     except ValueError as exc:
@@ -370,6 +377,7 @@ def extract(source: str, annotations: Path, output: Path, license_ack: Path,
         "official_archive": IMAGE_URLS[source],
         "archive_bytes": transport.size,
         "archive_sha256": None,  # Cannot hash a 40+GB ZIP without downloading it.
+        "zip64_central_directory_sha256": details["central_directory_sha256"],
         "source_annotation_sha256": hashlib.sha256(
             (annotations / "train" / (source + ".json")).read_bytes()
         ).hexdigest(),

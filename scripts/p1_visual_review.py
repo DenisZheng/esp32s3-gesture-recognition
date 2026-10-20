@@ -414,8 +414,10 @@ def verify_review(packet: Path, review: Path) -> dict:
             or not set(packet_ids) <= set(by_source[source])
         ):
             raise VisualReviewError("Review contains missing, duplicate or invented image IDs")
-        if primary and len(packet_ids) < min(3, len(by_source[source])):
-            raise VisualReviewError("Too few actual primary-source image records reviewed")
+        # A positive mapping decision needs >=3 independent train examples.
+        # Fewer photos can support exploratory/uncertain review, never PASS.
+        if primary and choice == "match" and len(packet_ids) < 3:
+            raise VisualReviewError("At least three primary-source photos required for mapping match")
         if decision.get("official_reference_checked") is not True:
             raise VisualReviewError("Official visual reference must be checked")
         note = decision.get("comparative_notes")

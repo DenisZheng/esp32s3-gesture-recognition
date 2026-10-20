@@ -102,6 +102,7 @@ class ZIP64ParsingTests(unittest.TestCase):
         self.assertEqual(len(index), 7)
         self.assertEqual(status["zip64_entries"], 8)
         self.assertEqual(status["jpeg_entries"], 7)
+        self.assertEqual(len(status["central_directory_sha256"]), 64)
         self.assertEqual(
             {stem: read_jpeg(member, self.transport) for stem, member in index.items()},
             self.samples
@@ -210,6 +211,7 @@ class ExtractPolicyTests(unittest.TestCase):
         doc = json.loads((self.output / "two_up/_provenance.private.json").read_text())
         self.assertEqual(len(doc["selected_images"]), 3)
         self.assertIsNone(doc["archive_sha256"])
+        self.assertEqual(len(doc["zip64_central_directory_sha256"]), 64)
         serialized = json.dumps(result) + json.dumps(doc)
         self.assertNotIn("FAKE_PERSON_", serialized)
         self.assertNotIn("SYNTHETIC_NEVER_EXPORTED", serialized)
@@ -289,6 +291,17 @@ class ExtractPolicyTests(unittest.TestCase):
     def test_unknown_url_is_rejected_before_HEAD(self):
         with self.assertRaises(ImageRangeError):
             HTTPRange("https://evil.invalid/steal.zip")
+
+    def test_public_github_ci_blocks_real_image_fetch_before_network(self):
+        # Injected fake transport is allowed for synthetic unit tests; actual
+        # authenticated image acquisition must never run on public GitHub CI.
+        with patch.dict("os.environ", {"GITHUB_ACTIONS": "true"}):
+            with patch("scripts.hagrid_image_zip64.HTTPRange") as backend:
+                with self.assertRaisesRegex(ImageRangeError, "forbidden in CI"):
+                    extract("two_up", self.anno, self.output, self.license,
+                            per_source=3, transport=None)
+                backend.assert_not_called()
+        self.assertFalse((self.output / "two_up").exists())
 
     def test_http_200_ignored_range_never_reads_image(self):
         class InvalidResponse:

@@ -106,3 +106,8 @@ The extracted JSON still contains personal/subject-related attributes. Never com
 ## Optional additional hard negatives — never automatic
 
 See [HARD_NEGATIVES.md](HARD_NEGATIVES.md), the [34-source registry](../configs/hagrid_v2_source_policy.json), and the deliberately invalid [local signature template](templates/p1-hard-negative-ack.example.json). The bounded ZIP inspector can now list all official source categories, but **conversion** requires the separate `--hard-negative-sources` and `--hard-negative-ack` flags. Only the seven reviewable single-hand candidates may ever be mapped to output class 7 in this policy revision. The `two_up`/`peace` mapping discrepancy must be resolved with licensed examples before the real ten-class data gate can pass. No real hard-negative review is claimed.
+
+
+## P1-03 visual mapping comparison packet
+
+Run the local-only, license-gated [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md) procedure to generate a **train-split** HTML comparison sheet with per-hand bounding boxes, multi-hand flags and a hashed private human review form. No real photos were acquired or approved in CI.

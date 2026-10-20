@@ -85,3 +85,6 @@ The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git 
 ## P1 extension: original 34-source safety policy (source-only evidence)
 
 The official HaGRIDv2 catalog has 34 raw sources. [HARD_NEGATIVES.md](HARD_NEGATIVES.md) and `configs/hagrid_v2_source_policy.json` freeze a four-part partition: 10 provisional primary labels, 7 independently reviewable single-hand hard-negative candidates, 10 **confusing lookalikes in quarantine**, and 7 compound two-hand categories in quarantine. New P1 guards and synthetic tests preserve the exact ten model outputs, require separate policy-digest-bound approvals to convert a visible noncommand hand to class 7, and reject unapproved extra hands instead of generating an unlabeled background. The official figures suggest `peace` may align with ESP-DL's V-style `two` better than HaGRID `two_up`; **no real-image approval is recorded**. P1 still PARTIAL; P2 BLOCKED on real-data and human acceptance.
+
+
+**P1-03 visual review packet slice (2026-10-20):** `scripts/p1_visual_review.py`, its synthetic tests and [review runbook](P1_VISUAL_REVIEW.md) provide a locally authorized, deterministic train-only HTML packet, per-hand annotated images and manifest-hash-bound human review form. Owner license acceptance, actual HaGRID JPEGs and ten-class visual approvals are **still pending**. P2 may not start.

@@ -236,8 +236,21 @@ def build_packet(annotations: Path, images: Path, output: Path,
         ).hexdigest()
         counters = Counter()
         candidates = []
+        image_dir = images / source
+        if not image_dir.is_dir() or image_dir.is_symlink():
+            raise VisualReviewError(f"Missing or symlinked local JPG source folder: {source}")
+        # Users typically stage just 3-20 JPGs per source from a 40+GB
+        # archive. Sample from those *available* JPEG stems first, not from
+        # tens of thousands of annotation rows with no local media!
+        available_stems = {
+            file.stem for file in image_dir.glob("*.jpg")
+            if file.is_file() and not file.is_symlink() and SAFE_STEM.fullmatch(file.stem)
+        }
         for stem, record in records.items():
             counters["annotation_records"] += 1
+            if stem not in available_stems:
+                counters["annotation_without_local_jpeg"] += 1
+                continue
             candidate = _clean_record(stem, record)
             if candidate is None:
                 counters["invalid_per_hand_records"] += 1

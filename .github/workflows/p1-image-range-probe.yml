@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Check out branch to run actual pinned ZIP64 reader
+        uses: actions/checkout@v4
+      - name: Smoke test actual ZIP64 index reader without fetching image payloads
+        run: python3 -m scripts.hagrid_image_zip64 inspect --source two_up
       - name: Inspect source image ZIP metadata only (never download images)
         shell: bash
         run: |

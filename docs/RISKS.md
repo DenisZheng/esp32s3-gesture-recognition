@@ -27,4 +27,4 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 
 | R21 | H | Blindly using all remaining 24 HaGRID sources as class-7 negatives poisons near-matching true commands and mislabels two-hand compounds | Explicit 10/7/10/7 source policy, signed local hard-negative reviews, compound/lookalike quarantine, fail-closed entire-image rejection | CODE + SYNTHETIC TESTS DONE; REAL EVIDENCE PENDING |
 
-| R22 | H | HaGRID JPEG ZIPs are 40+ GB per source; ZIP64 offsets, changing upstream bytes, ID leakage and unlicensed media downloads | Range-only inspector and local gate; one live `two_up` index smoke PASS, 21 synthetic parser/security tests; CRC/hash/data retention; other sources + actual JPEG QA pending | ZIP64 METADATA VERIFIED; REAL IMAGES PENDING |
+| R22 | H | HaGRID JPEG ZIPs are 40+ GB per source; ZIP64 offsets, changing upstream bytes, ID leakage and unlicensed media downloads | Range-only inspector and local gate; all four live ZIP64 index smoke PASS, archive sizes/index SHA256 pinned, 23 synthetic parser/security tests; CRC/member SHA256; real JPEG and license QA pending | ZIP64 METADATA VERIFIED; REAL IMAGES PENDING |

@@ -37,7 +37,7 @@ On your **own workstation only, after valid license acknowledgment**, extract th
       --license-ack data/reviews/hagrid-license-ack.json \
       --max-transfer-mib 80
 
-This extracts only compressed JSON members, NOT JPGs. The original HaGRID images are in **large per-gesture ZIP64 archives (e.g. two_up.zip = 42.73 GB)**. Rather than downloading any full class ZIP, the new [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) procedure can retrieve a few authorized source JPEGs by exact HTTP Range, using just ~4 MB of metadata index per class. **Real image download is blocked until actual owner license acceptance**, and only the two_up remote index has been smoke-tested.
+This extracts only compressed JSON members, NOT JPGs. The original HaGRID images are in **large per-gesture ZIP64 archives (e.g. two_up.zip = 42.73 GB)**. Rather than downloading any full class ZIP, the new [P1_IMAGE_ZIP64.md](P1_IMAGE_ZIP64.md) procedure can retrieve a few authorized source JPEGs by exact HTTP Range, using just ~4 MB of metadata index per class. **Real image download is blocked until actual owner license acceptance**, and all four number-two contrast archives have passed index-only live smoke testing; no human JPG was fetched.
 
 ## 2. Stage a few separately permitted local images
 

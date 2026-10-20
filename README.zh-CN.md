@@ -42,3 +42,6 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 
 
 **P1-04 数据下载优化：** 已实测 HaGRIDv2 的 `two_up.zip` 约 42.73 GB，索引含 30,688 张 JPEG。新增 ZIP64 按字节提取工具，可在实际授权后仅选取训练集少量图片供本地十类映射验收，无需下载整个类别压缩包。公开 GitHub CI 仅检查元数据，未下载人物图片。参见 [P1_IMAGE_ZIP64.md](docs/P1_IMAGE_ZIP64.md)。
+
+
+**P1-04 四类对照源均已实测：** `two_up`、`peace`、`peace_inverted`、`two_up_inverted` 的官方 ZIP64 索引均通过 GitHub Actions 真实读取，归档精确大小及中央索引 SHA256 已固定，数据源更改会拒绝下载。真实人物图片依然没有下载，许可签核和人工图像验收仍未完成。 [验证记录](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39420065430)。

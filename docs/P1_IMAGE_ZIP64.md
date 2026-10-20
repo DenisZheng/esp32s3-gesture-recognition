@@ -9,13 +9,27 @@ The official HaGRIDv2 dataset offers large class ZIPs. An actual **metadata-only
 
 Verified evidence (no image content downloaded):
 - [ZIP64 source-archive probe](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39397602371)
-- [Actual source parser smoke test](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39419164125)
+- [Actual `two_up` parser smoke test](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39419164125)
+- [Remaining three source index smoke tests](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39420065430)
+
+### Verified metadata: all four number-two comparison archives
+
+| Source | Archive bytes | JPEG entries | ZIP64 index bytes |
+|---|---:|---:|---:|
+| `two_up` | 42,733,450,409 | 30,688 | 3,921,893 |
+| `peace` | 43,368,944,020 | 31,801 | 4,032,564 |
+| `peace_inverted` | 41,355,311,911 | 29,849 | 4,052,438 |
+| `two_up_inverted` | 41,724,228,996 | 29,991 | 4,101,812 |
+
+All four public ZIP64 indexes were downloaded **only as metadata**; no raw person images. Their SHA256 values and exact archive sizes are pinned in `scripts/hagrid_image_zip64.py`. If an upstream archive changes, `inspect` and `extract` refuse it until a new reviewed baseline PR is prepared.
+
+
 
 We can download a **64-KiB ZIP64 footer**, at most an **8-MiB ZIP directory**, and then *only the compressed byte ranges for the exact image keys selected from train annotations*. There is no need to download the 40+ GB file simply to inspect a few photos.
 
 Source image URLs are from [HaGRIDv2 official dataset README](https://github.com/hukenovs/hagrid/tree/Hagrid_v2-1M#dataset). The initial implementation pins **four sources for the number-two ambiguity**:
 `two_up`, `peace`, `peace_inverted`, `two_up_inverted`.
-Only `two_up` has been smoke-tested against real remote ZIP metadata so far; the other three sources are expected to use compatible archives but have not yet passed the same live metadata test. The observed `two_up` byte length is hard-pinned to prevent silently using a changed remote object.
+All **four source ZIP64 indexes have now passed live metadata-only GitHub Actions**. Their archive byte lengths **and central-directory SHA256** are pinned in `scripts/hagrid_image_zip64.py`; the extractor refuses any remote index with a different digest or length. No real image payload was requested.
 
 The workflow stays on ESPDet-Pico, **one 224x224 detector with exactly 10 model classes**. Nothing here changes output names/indices or downloads pretrained weights.
 
@@ -99,8 +113,8 @@ Open the private file `data/reviews/packets/two-v1/index.html`, verify boxes and
 
 ## Risks and limitations
 
-- Real remote image-metadata smoke test currently covers `two_up` only; other class archives must pass `inspect` before any local extraction.
-- Source archives are large, may be replaced and do not publish a convenient full-archive SHA256. Only one observed source length is hard-pinned; others use HEAD/Content-Range plus validators, central index SHA256 and CRC32/member SHA256. Any unexpected change is a **blocker pending explicit review**, not proof of reproducible corpus identity.
+- **All four remote ZIP64 indexes have been smoke-tested** and hashes/lengths locked. Individual JPEG payload extraction and visual correctness are **still NOT tested on real images**.
+- Source archives are large and have no convenient full-archive SHA256. **All four** observed byte lengths and central-index SHA256 digests are hard-pinned. Individual images are checked by member CRC32 and SHA256 on download; unexpected upstream changes block extraction until a reviewed baseline update. This is still not equivalent to hashing entire ZIP archives.
 - Since each ZIP entry is independently DEFLATE-compressed, exact range extraction is viable **only with correct ZIP64 metadata and CRC**. This is proven on synthetic fixtures; actual image extraction is **NOT** yet proven.
 - Human subject rights, true train/validation/test subject isolation, full JPEG decoding, image quality, label completeness, pose ambiguity, occlusion, command confusion, and person demographics require local human verification before P1 PASS.
 - These tools do **not** train, export, quantize or run a model. P2, P3 and CoreS3 P4 are still PENDING.

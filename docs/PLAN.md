@@ -91,3 +91,6 @@ The official HaGRIDv2 catalog has 34 raw sources. [HARD_NEGATIVES.md](HARD_NEGAT
 
 
 **P1-04 ZIP64 selective image access slice (2026-10-20):** Real public-source metadata inspection of the 42.73GB HaGRID `two_up` archive confirms 30,688 JPEG entries, 27,610 ZIP64 local-header offsets and HTTP 206 support. `scripts/hagrid_image_zip64.py` and synthetic tests implement local-only, owner-license-gated bounded JPG Range downloads for the four number-two comparison sources. [Runbook](P1_IMAGE_ZIP64.md). **No real JPG image was acquired or visually approved**. The source-index smoke test is real; image-extraction behavior is synthetic-tested. P1 signed sample review and P2 remain blocked.
+
+
+**P1-04 four-archive follow-up:** All four official numeral-two contrast archives passed actual ZIP64 directory parsing on public metadata; archived byte length and index SHA256 are pinned, and a missing/mismatched digest now blocks local extraction. Live evidence: [additional-source CI run](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39420065430). **No real JPGs downloaded**; still no signed mapping P1 PASS or P2 permission.

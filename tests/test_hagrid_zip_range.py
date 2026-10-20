@@ -88,13 +88,21 @@ class HaGRIDRangeZipTests(unittest.TestCase):
             with self.assertRaises(PreparationError):
                 select_members(self._members(), splits, sources)
 
-    def test_tampered_advertised_compressed_size_rejected(self):
+    def test_unselected_large_annotation_does_not_break_zip_index(self):
         b = bytearray(self.raw_zip)
         i = b.find(b"PK\x01\x02")
         self.assertGreaterEqual(i, 0)
+        # Simulates a large *other class* in the official 121-entry archive.
         struct.pack_into("<I", b, i+20, 40 * 1024 * 1024)
-        with self.assertRaises(PreparationError):
-            parse_directory(bytes(b)[-65536:], len(b))
+        members = parse_directory(bytes(b)[-65536:], len(b))
+        chosen = select_members(members, ("train",), ("no_gesture",))
+        self.assertEqual(len(chosen), 1)
+        with self.assertRaisesRegex(PreparationError, "Selected ZIP member exceeds"):
+            select_members(members, ("train",), ("one",))
+        with patch("scripts.hagrid_zip_range.get_range") as fake:
+            with self.assertRaisesRegex(PreparationError, "Selected ZIP member exceeds"):
+                read_member(members["annotations/train/one.json"])
+            fake.assert_not_called()
 
     def test_truncated_tail_rejected(self):
         with self.assertRaises(PreparationError):

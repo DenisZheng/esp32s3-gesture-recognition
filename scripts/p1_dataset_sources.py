@@ -12,6 +12,8 @@ import json
 import os
 import re
 import stat
+import time
+import urllib.error
 import zipfile
 import zlib
 from pathlib import Path
@@ -142,6 +144,8 @@ class RemoteAnnotations:
         file = self.cache / "annotations" / split / f"{source}.json"
         if file.exists() or file.is_symlink():
             _safe_local(file, self.cache)
+            if file.stat().st_size != m.uncompressed:
+                raise SourceError("Cached annotation length changed")
             raw = file.read_bytes()
             if len(raw) != m.uncompressed or zlib.crc32(raw) & 0xFFFFFFFF != m.crc:
                 raise SourceError("Cached annotation CRC/size changed; refuse poisoned cache")
@@ -267,8 +271,26 @@ class MeteredHTTPRange(imagezip.HTTPRange):
         super().__init__(url, size)
 
     def get(self, start: int, end: int) -> bytes:
-        self.budget.charge(end - start + 1)
-        return super().get(start, end)
+        # Transient 429/5xx/transport problems get two bounded retries. Each
+        # attempt consumes budget, and every retry re-verifies HTTP 206 +
+        # If-Match/Content-Range. Never retry HTTP 403/200 or corrupt bytes.
+        for attempt in range(3):
+            self.budget.charge(end - start + 1)
+            try:
+                return super().get(start, end)
+            except imagezip.ImageRangeError as exc:
+                cause = exc.__cause__
+                transient = (
+                    isinstance(cause, urllib.error.HTTPError)
+                    and cause.code in (429, 500, 502, 503, 504)
+                ) or (
+                    isinstance(cause, urllib.error.URLError)
+                    and not isinstance(cause, urllib.error.HTTPError)
+                )
+                if not transient or attempt == 2:
+                    raise
+                time.sleep(0.5 * (2 ** attempt))
+        raise SourceError("Unreachable retry limit")
 
 
 class RemoteImages:
@@ -304,6 +326,9 @@ class RemoteImages:
         file = self.cache / "images" / source / (stem + ".jpg")
         if file.exists() or file.is_symlink():
             _safe_local(file, self.cache)
+            if (file.stat().st_size != member.uncompressed
+                    or file.stat().st_size > MAX_JPEG_BYTES):
+                raise SourceError("Resumable image cache changed/CRC invalid")
             data = file.read_bytes()
             if (len(data) != member.uncompressed
                     or zlib.crc32(data) & 0xFFFFFFFF != member.crc32):

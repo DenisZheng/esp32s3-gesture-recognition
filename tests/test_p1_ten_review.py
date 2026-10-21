@@ -193,7 +193,7 @@ class PrivateReviewCampaignTests(unittest.TestCase):
     def test_preparation_fails_in_public_ci_before_real_data(self):
         with patch.dict(os.environ, {"CI": "true", "GITHUB_ACTIONS": "true"}):
             with patch("scripts.p1_ten_review.fetch_train_annotations") as call:
-                with self.assertRaisesRegex(TenReviewError, "forbidden in CI"):
+                with self.assertRaisesRegex(TenReviewError, "cannot be acquired in CI"):
                     prepare("two", self.root / "ci-forbidden", self.license)
                 call.assert_not_called()
 

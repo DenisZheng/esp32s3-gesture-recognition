@@ -72,3 +72,8 @@ Index-only remote smoke tests establish that a 42.73 GB archive supports ranged 
 ### P2-00 separate GTX1060 Docker GPU gate
 
 A prior SCRFD PyTorch1.8/CUDA11.1 image is NOT an ESPDet-Pico-compatible runtime. The separate [GTX1060 Linux Docker workflow](P2_GTX1060_DOCKER.md) must pass a real build and all of `p2_docker_host.sh gpu` (sm_61/6GiB approximate, CUDA12.1 matmul + cuDNN backward), `source` (pinned source), `doctor` (Torch/Ultralytics/CUDA) and `smoke` (random 224px nc10 CUDA graph/backprop) on the owner's GPU. Offline Bash syntax tests are NOT a substitute. Save non-sensitive CUDA evidence locally, do not include HaGRID photos or weights in GitHub. **P1 human gates still block real training.**
+
+
+### P1-05 automatic/manual full ten-source dataset candidate
+
+The unified builder requires actual private owner research-use approval and all-ten source/gesture mapping review before reading any HaGRID JPEG or original person annotation. Local-dir, local-zip and automatic pinned ZIP Range inputs must yield identical strict per-hand nc10 YOLO labels and separated train/val/test subjects; unknown/unapproved second hands and compound boxes reject the full frame. Candidate output requires requested quotas in every source/split, SHA256 integrity evidence and no unreviewed `no_hand` negatives. Synthetic CI does not prove actual image decode or rights. Final stage still requires private human inspection/QA and **does not unlock training automatically**. [Instructions](P1_DUAL_SOURCE_DATASET.md).

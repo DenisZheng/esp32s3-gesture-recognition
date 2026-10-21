@@ -103,3 +103,8 @@ The [selective HaGRID ZIP64 JPEG workflow](docs/P1_IMAGE_ZIP64.md) allows an **a
 ### P2-00 isolated GTX 1060 Linux Docker host
 
 For the existing **Linux / 32 GiB RAM / GTX 1060 6 GiB (Pascal sm_61)** machine that previously trained SCRFD, **reuse the working Docker + NVIDIA Container Toolkit**, not the old SCRFD PyTorch 1.8/CUDA 11.1/MMCV image. The new [P2 GTX 1060 Docker guide](docs/P2_GTX1060_DOCKER.md) provides an isolated PyTorch 2.2.0 / CUDA 12.1 / Ultralytics 8.4.0 image and a safe sequence: `build → gpu → source → doctor → smoke`. Docker context excludes all licensed images/weight files; the helper contains **no real training command**. GitHub offline CI passes but **owner GPU image build/CUDA smoke remains PENDING**.
+
+
+### P1-05 manual ZIP or auto selective dataset builder
+
+[Dataset preparation manual](docs/P1_DUAL_SOURCE_DATASET.md): `python3 -m scripts.p1_dataset_builder plan` works offline; after real research license **and all-ten visual mapping** approval, `build --mode auto` uses pinned official ZIP64/ZIP32 indexes with resumable local cache, while `--mode local-zip` reads ten manually downloaded per-class ZIPs without extracting them, and `--mode local-dir` reads pre-extracted files. All modes generate the same nc10 YOLO dataset with subject-disjoint original splits and SHA256 verification, **marked pending actual human P1 QA**. No real JPG/annotation was fetched in CI, and no training is started.

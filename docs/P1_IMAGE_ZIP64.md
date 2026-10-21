@@ -123,3 +123,8 @@ Open the private file `data/reviews/packets/two-v1/index.html`, verify boxes and
 ## One-command orchestration (recommended for the four-class number-two review)
 
 [**P1_ONE_CLICK_REVIEW.md**](P1_ONE_CLICK_REVIEW.md) provides a single **local-only** `python3 -m scripts.p1_review_workflow prepare` command that coordinates four licensed train JSONs, all four SHA256-pinned ZIP64 archives, limited JPEG member downloads, rollback-safe staging, private HTML visual cards and human-signoff verification. Unlike the individual `extract` commands, it guarantees the final workspace appears only after all four classes finish. The command remains **blocked until real owner license acceptance** and cannot download real annotations/images in CI.
+
+
+### P1-05 ten-source index extension
+
+The original four-way visual review download remains available. P1-05 additionally pinned the ZIP64 central index byte sizes and hashes for all nine canonical command-source archives, and the special 517,860,551-byte ZIP32 archive for `no_gesture` (2,164 root JPEGs; upstream official path under `/datasets/hagrid_v2/...`). All ten source index parsers passed public metadata-only GitHub Actions. [P1-05 dataset builder](P1_DUAL_SOURCE_DATASET.md) provides larger user-approved pilot quotas and dual manual/auto modes, independent of the 3–20-image visual comparison utility.

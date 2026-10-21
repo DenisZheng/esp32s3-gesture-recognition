@@ -111,3 +111,8 @@ The user can prepare Windows WSL2 Ubuntu/NVIDIA or Linux GPU ahead of dataset ap
 
 
 **P2-00 owner hardware specialization — GTX1060 Linux Docker (2026-10-21):** The owner has an existing 32GiB RAM Linux GTX1060 6GiB Pascal sm_61 system with a proven SCRFD Docker+NVIDIA runtime workflow. New [GTX1060 Docker guide](P2_GTX1060_DOCKER.md), separate digest-pinned PyTorch2.2/CUDA12.1 image, host UID/GID mount wrapper, real CUDA matmul/conv gradient probe and 13 offline tests were added. No changes to prior SCRFD image or work_dirs. **Docker build and GTX1060 GPU execution on owner host remain PENDING**, despite the previously verified generic CPU nc10 source graph. Real P2 training is still blocked by P1 permission/visual/data acceptance.
+
+
+### P1-05 ten-source automatic/manual dataset preparation (code + synthetic tests)
+
+New [operator guide](P1_DUAL_SOURCE_DATASET.md) and `p1_dataset_builder` support (1) auto HTTP Range with verified official ZIP indexes + private resumable cache, (2) manually downloaded per-class image ZIPs and original annotation ZIP, and (3) already-extracted directories. Ten-class output is frozen at 224x224, per-physical-hand YOLO detection; subject-disjoint original splits are independently checked across all 30 JSONs, unknown second hands reject whole frames and class-7 `no_gesture` remains a visible hand bbox. A **special ZIP32 path/root JPEG structure** for the official 2164-image `no_gesture` source is handled. Offline/synthetic CI validates conversion, guards and per-file hashes; **real user image download, license acceptance, all-ten visual signoff and final P1 QA are PENDING; P2 training NOT started**.

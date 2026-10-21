@@ -92,12 +92,15 @@ class ZIP64ParsingTests(unittest.TestCase):
     def test_all_four_image_archives_have_immutable_index_metadata(self):
         self.assertEqual(set(IMAGE_URLS), set(PINNED_SIZES))
         self.assertEqual(set(IMAGE_URLS), set(PINNED_INDEX_SHA256))
-        self.assertEqual(len(IMAGE_URLS), 4)
+        self.assertEqual(len(IMAGE_URLS), 13)
         self.assertEqual(PINNED_SIZES["two_up"], 42_733_450_409)
+        self.assertEqual(PINNED_SIZES["no_gesture"], 517_860_551)
+        self.assertIn("/datasets/hagrid_v2/hagrid_v2_zip/no_gesture.zip",
+                      IMAGE_URLS["no_gesture"])
         for source, digest in PINNED_INDEX_SHA256.items():
             self.assertEqual(len(digest), 64)
             self.assertTrue(all(ch in "0123456789abcdef" for ch in digest))
-            self.assertGreater(PINNED_SIZES[source], 40_000_000_000)
+            self.assertGreater(PINNED_SIZES[source], 100_000_000)
 
     def test_modified_public_zip64_index_fails_immutable_baseline(self):
         # Force the real HTTP transport type with synthetic archive bytes:
@@ -108,6 +111,35 @@ class ZIP64ParsingTests(unittest.TestCase):
         transport.get = lambda start, end: self.transport.get(start, end)
         with self.assertRaisesRegex(ImageRangeError, "index changed"):
             inspect("two_up", transport)
+
+    def test_small_no_gesture_zip32_with_root_jpegs_and_ignored_nested_extras(self):
+        raw = io.BytesIO()
+        names = {}
+        with zipfile.ZipFile(raw, "w", compression=zipfile.ZIP_DEFLATED) as z:
+            for i in range(3):
+                name = f"synthetic_{i:03}"
+                names[name] = fake_jpeg(name)
+                z.writestr(f"{name}.jpg", names[name])
+            z.writestr("__MACOSX/._synthetic.jpg", b"private-vendor-metadata")
+        z = raw.getvalue()
+        from scripts.hagrid_image_zip64 import parse_zip_footer
+        o, n, count = parse_zip_footer(z, len(z))
+        self.assertEqual(count, 4)
+        index = parse_image_index(z[o:o+n], count, "no_gesture")
+        self.assertEqual(set(index), set(names))
+        for stem, m in index.items():
+            self.assertEqual(read_jpeg(m, FakeTransport(z)), names[stem])
+
+    def test_zip32_bad_traversal_member_rejected(self):
+        raw = io.BytesIO()
+        with zipfile.ZipFile(raw, "w", compression=zipfile.ZIP_DEFLATED) as z:
+            z.writestr("synthetic.jpg", fake_jpeg("synthetic"))
+            z.writestr("../escaped.jpg", fake_jpeg("escaped"))
+        z = raw.getvalue()
+        from scripts.hagrid_image_zip64 import parse_zip_footer
+        o, n, count = parse_zip_footer(z, len(z))
+        with self.assertRaises(ImageRangeError):
+            parse_image_index(z[o:o+n], count, "no_gesture")
 
     def test_fake_archive_has_real_zip64_record_and_offsets(self):
         self.assertIn(b"PK\x06\x06", self.raw)

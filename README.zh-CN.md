@@ -61,3 +61,8 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 ### P2-00 现有 Linux GTX 1060 Docker 训练机
 
 根据已有 SCRFD 自训练手册，可以直接复用 **Linux + 32GB 内存 + GTX 1060 6GB + Docker/NVIDIA Container Toolkit**，不必重新安装 WSL2，也不能覆盖 SCRFD 旧的 PyTorch 1.8/CUDA 11.1/MMCV 镜像。新增 [GTX 1060 专用 Docker 环境和验收指南](docs/P2_GTX1060_DOCKER.md)，新镜像使用 PyTorch 2.2.0 + CUDA 12.1 + Ultralytics 8.4.0。依次通过 `build → gpu → source → doctor → smoke` 验证，**当前 GitHub 只做离线合成检查，真实 1060 CUDA 仍待你在 Linux 主机上执行**；许可签核和真实数据验收之前不启动正式训练。
+
+
+### P1-05 双模式训练集准备
+
+已新增 [自动按需下载／手动 ZIP／本地目录统一构建指南](docs/P1_DUAL_SOURCE_DATASET.md)。`python3 -m scripts.p1_dataset_builder plan` 离线预览；经数据授权和十类真实视觉映射签核后，可用 `build --mode auto` 断点续取官方 ZIP 的目标图片，也可用 `--mode local-zip` 直接读取手动下载的每类原始 ZIP，或 `--mode local-dir` 读取已解压目录。输出标准 10 类 YOLO 检测训练集，按 `user_id` 校验原始 train/val/test 隔离，保留逐手检测框，哈希校验；**不能代替人工图片 QA、HaGRID 许可和正式训练验收**。`no_gesture` 使用官方另一地址的小 ZIP32 包，已专门兼容。

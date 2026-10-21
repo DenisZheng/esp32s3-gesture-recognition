@@ -25,23 +25,50 @@ from scripts.p1_visual_review import (
 )
 
 HOST = "https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru"
+# The source registry follows HaGRIDv2's official Hagrid_v2-1M README.
+# no_gesture is a special small ZIP32 on /datasets/hagrid_v2.
+_PRIMARY_AND_CONTRAST = (
+    "one", "two_up", "three", "four", "palm", "like", "ok",
+    "no_gesture", "call", "dislike",
+    "peace", "peace_inverted", "two_up_inverted",
+)
 IMAGE_URLS = {
-    source: (HOST + "/datasets/hagrid/hagrid_dataset_new_554800/"
-             "hagrid_dataset/" + source + ".zip")
-    for source in ("two_up", "peace", "peace_inverted", "two_up_inverted")
+    source: (
+        HOST + "/datasets/hagrid_v2/hagrid_v2_zip/no_gesture.zip"
+        if source == "no_gesture"
+        else HOST + "/datasets/hagrid/hagrid_dataset_new_554800/hagrid_dataset/"
+        + source + ".zip"
+    )
+    for source in _PRIMARY_AND_CONTRAST
 }
-# All four archive sizes and SHA256 hashes of their ZIP64 central directories
-# were verified by index-only GitHub Actions on 2026-10-20. This pins the
-# original JPG names, member sizes/offsets and CRC32s without downloading
-# any photographs or 40+GB archives.
+# Public index-only verification 2026-10-21; no individual JPEG fetched.
+# Archive size + central-index SHA256 pin names, 64-bit offsets and CRCs.
 PINNED_SIZES = {
+    "one": 43_610_049_235,
     "two_up": 42_733_450_409,
+    "three": 43_097_329_575,
+    "four": 44_041_308_163,
+    "palm": 43_920_357_177,
+    "like": 43_081_329_168,
+    "ok": 43_354_919_321,
+    "no_gesture": 517_860_551,
+    "call": 38_906_235_113,
+    "dislike": 42_758_238_818,
     "peace": 43_368_944_020,
     "peace_inverted": 41_355_311_911,
     "two_up_inverted": 41_724_228_996,
 }
 PINNED_INDEX_SHA256 = {
+    "one": "c8b911381d61ea4374913f576eeea1334b984391b0493770a0d5bbe8de383b14",
     "two_up": "c369829314b43099933239d7b8c07f89f5bb1bd9131dbf9092be3292fbe7327b",
+    "three": "2cdb211379036801a1e003c94bddcf11ebe9043d7ada81c176fcd62eea7ff0e4",
+    "four": "c772ad3741f7d0233f49d301728710d64ae1c0e3ba904c20c04fbf654987b916",
+    "palm": "0bccaed4942c09f4d42172ffe1005c21e55cb3c329ff09286fa3d316dae8927b",
+    "like": "9eb5dfc09e487960991fc772453bdc2f621ddb3012aeb6c99051ba02327ad3f2",
+    "ok": "c10dbec707e11511cbd5a896d75ffe00be6f634bedb1a33aa92de0a5fe97bf20",
+    "no_gesture": "be89efd58ab78c951ec33b4826c3cc83de412d5490a9ad1a393ff58934cbbd1c",
+    "call": "e1b8b518a4f335cc8330da6498c5d18ff9bf2d220aa55bf88813025c81a47dc9",
+    "dislike": "47bf419175b13fb1b4fc1ecfd577228e89fc51dfbb2207fda59079714e5c5f1a",
     "peace": "e0f44cfd7b293cecf8cb13579243fbf2481ace673255bb8af8d7c82db93d06c6",
     "peace_inverted": "2a6f997649011932cb1fe7ce30993f1ca21963cf38e8bd408adcde5ae9fdfd69",
     "two_up_inverted": "011fbeded458f8ef7031b23c4ef33c569bef0ed29899491e061b25de3bd92f6a",
@@ -172,6 +199,25 @@ def parse_zip64_footer(tail: bytes, archive_size: int) -> tuple[int, int, int]:
     return cd_offset, cd_size, total_entries
 
 
+def parse_zip_footer(tail: bytes, archive_size: int) -> tuple[int, int, int]:
+    """Bounded ZIP32/ZIP64 directory, including the special no_gesture ZIP32."""
+    eocd = tail.rfind(b"PK\x05\x06")
+    if eocd < 0 or eocd + 22 != len(tail):
+        raise ImageRangeError("Missing/commented ZIP end-of-directory")
+    _, disk, cdisk, n_disk, count, size32, offset32, comment = struct.unpack_from(
+        "<4s4H2IH", tail, eocd
+    )
+    if disk or cdisk or n_disk != count or comment:
+        raise ImageRangeError("Multidisk or nonstandard image ZIP")
+    if (count == 0xFFFF or offset32 == 0xFFFFFFFF
+            or size32 == 0xFFFFFFFF):
+        return parse_zip64_footer(tail, archive_size)
+    if (not 1 <= count <= 200_000 or not 0 < size32 <= MAX_CENTRAL_BYTES
+            or offset32 + size32 > archive_size - len(tail) + eocd):
+        raise ImageRangeError("Invalid/oversized ZIP32 central directory")
+    return offset32, size32, count
+
+
 def _zip64_values(extra: bytes, regular_usize: int, regular_csize: int,
                   regular_offset: int, regular_disk: int):
     expected = (
@@ -231,11 +277,25 @@ def parse_image_index(central: bytes, count: int, source: str) -> dict[str, Imag
         except UnicodeError as exc:
             raise ImageRangeError("Bad ZIP image entry name") from exc
         extra = central[cursor + 46 + name_len:cursor + 46 + name_len + extra_len]
-        # Container metadata is not a photo: never use paths from the archive.
+        # The small official no_gesture ZIP has 2164 photos at archive root.
+        # Only strict safe names may be extracted. Any extra nested media
+        # must be reviewed before adding a whitelist exception.
         if name == source + "/":
             cursor = end
             continue
-        prefix = source + "/"
+        if source == "no_gesture" and "/" in name:
+            # The exact SHA-pinned official 2166-entry ZIP32 contains two
+            # noncanonical nested JPEG entries in addition to 2164 root JPGs.
+            # Ignore them only as opaque metadata, never write those paths.
+            parts = name.split("/")
+            if (any(not part or part in (".", "..") or "\\" in part for part in parts)
+                    or flags & 1
+                    or method not in (0, 8)
+                    or (f[15] >> 16) & 0o170000 == 0o120000):
+                raise ImageRangeError("Unsafe nested no_gesture ZIP metadata")
+            cursor = end
+            continue
+        prefix = "" if source == "no_gesture" else source + "/"
         if (
             not name.startswith(prefix) or not name.endswith(".jpg")
             or not STEM_RE.fullmatch(name[len(prefix):-4])
@@ -300,11 +360,11 @@ def read_jpeg(member: ImageMember, transport: HTTPRange) -> bytes:
 
 def inspect(source: str, transport: HTTPRange | None = None):
     if source not in IMAGE_URLS:
-        raise ImageRangeError("Source not in approved four-way P1 contrast group")
+        raise ImageRangeError("Source absent from pinned official HaGRID registry")
     if transport is None:
         transport = HTTPRange(IMAGE_URLS[source], PINNED_SIZES.get(source))
     tail = transport.get(max(0, transport.size - TAIL_BYTES), transport.size - 1)
-    offset, size, count = parse_zip64_footer(tail, transport.size)
+    offset, size, count = parse_zip_footer(tail, transport.size)
     central = transport.get(offset, offset + size - 1)
     index_digest = hashlib.sha256(central).hexdigest()
     # An injected synthetic transport may have tiny fake ZIPs for unit tests.

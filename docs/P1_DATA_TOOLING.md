@@ -119,3 +119,8 @@ Run the local-only, license-gated [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md) pro
 
 
 **Measured four-class train metadata cost (2026-10-20):** For `two_up/peace/peace_inverted/two_up_inverted`, the official ZIP index lists **4 files**, **54,388,405 compressed** and **323,899,528 uncompressed bytes**. The 80 MiB one-command default cap is sufficient for compressed transfer. This is directory-only inspection; personal data remains unacquired. See [one-command local review](P1_ONE_CLICK_REVIEW.md).
+
+
+### P1-05 bulk pilot import, manual ZIP and auto resumed Range mode
+
+The old `hagrid_p1.convert` was deliberately limited to a 1–100-image **micro** tool and `hagrid_image_zip64.extract` to 3–20 JPEGs for reviews. For a *full ten-source* authorized pilot (default 500 train/50 val/50 test **per source**) use the separate [P1-05 dual-source dataset builder](P1_DUAL_SOURCE_DATASET.md), which accepts manually downloaded archives/directories or resumes selected official ZIP members into a private cache. The builder **still requires** both real license and all-ten mapping approval, and never claims P1 PASS or downloads photos in CI.

@@ -35,3 +35,5 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 
 
 **R24 update (2026-10-21):** The Ultralytics 8.4.0 candidate with pinned Torch 2.2.0 **passed an actual CPU synthetic forward/backward** for ESPDet-Pico `nc=10` with custom classification gradients. CUDA GPU on owner's machine and real data/loss remain open; do not call R24 fully closed. [CPU evidence](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733).
+
+| R25 | M | Reusing the SCRFD PyTorch1.8/CUDA11.1/MMCV Docker image for ESPDet-Pico could yield silent Torch/Ultralytics incompatibility or overwrite old checkpoints; CUDA13 excludes Pascal sm_61 | Separate pinned PyTorch2.2/CUDA12.1 Linux/amd64 Docker image, minimal context, 2GiB shm, host-owned mounts, sm61 real-kernel GPU + nc10 graph smokes; explicit no-train helper | DOCKER SOURCE/OFFLINE CI DONE; OWNER CUDA PASS PENDING |

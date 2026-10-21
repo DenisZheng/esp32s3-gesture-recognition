@@ -98,3 +98,8 @@ The [selective HaGRID ZIP64 JPEG workflow](docs/P1_IMAGE_ZIP64.md) allows an **a
 
 
 **2026-10-21 source-only CPU compatibility PASS:** Real scratch ESPDet-Pico `nc=10` constructed and completed forward + synthetic gradient at 224×224 with Python 3.10.22, Torch 2.2.0+CPU, Ultralytics 8.4.0, and pinned ESP-Detection; 42 custom classification-head parameter tensors had finite gradients. [Proof](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733). This is **not** actual detection-loss training, HaGRID approval, or user GPU CUDA validation.
+
+
+### P2-00 isolated GTX 1060 Linux Docker host
+
+For the existing **Linux / 32 GiB RAM / GTX 1060 6 GiB (Pascal sm_61)** machine that previously trained SCRFD, **reuse the working Docker + NVIDIA Container Toolkit**, not the old SCRFD PyTorch 1.8/CUDA 11.1/MMCV image. The new [P2 GTX 1060 Docker guide](docs/P2_GTX1060_DOCKER.md) provides an isolated PyTorch 2.2.0 / CUDA 12.1 / Ultralytics 8.4.0 image and a safe sequence: `build → gpu → source → doctor → smoke`. Docker context excludes all licensed images/weight files; the helper contains **no real training command**. GitHub offline CI passes but **owner GPU image build/CUDA smoke remains PENDING**.

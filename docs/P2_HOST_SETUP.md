@@ -87,3 +87,8 @@ In [GitHub Actions](https://github.com/DenisZheng/esp32s3-gesture-recognition/ac
 **Actual evidence:** ten-class scratch ESPDet-Pico network instantiated; stage tensor shapes `(1,14,28,28)`, `(1,14,14,14)`, `(1,14,7,7)`; custom gesture-class head received **42 finite-gradient parameter tensors**; synthetic backward and SGD step succeeded. The changed Ultralytics 8.4 output dictionary (`boxes/scores/feats`) was explicitly handled, without patching third-party dependencies. No JPGs, annotations, pretrained weights or checkpoint were used.
 
 This supports a *CPU-verified compatibility baseline* for setting up your host. **NVIDIA CUDA on the owner's PC, a real detection training loss, and real licensed dataset training are not verified.** The candidate constraint file stays named `candidate` until these later gates pass.
+
+
+## Existing Linux/GTX1060 with prior SCRFD Docker deployment — use this instead of WSL2
+
+If you already have Linux, a **GTX1060 6GiB (sm_61), 32GiB system RAM**, and a verified NVIDIA Container Toolkit from SCRFD training, prefer the [**separate GTX1060 Docker host guide**](P2_GTX1060_DOCKER.md). **Do not install WSL2** or alter the old PyTorch1.8/CUDA11.1/MMCV training image. Use the published PyTorch2.2/CUDA12.1 image isolated from old SCRFD, check actual GPU matrix+conv gradient and then run the existing scratch nc10 graph CUDA smoke. The helper does not start genuine training or access HaGRID. Starting batch 4 / workers 2 is a **later unmeasured candidate**, after licensed P1 acceptance only.

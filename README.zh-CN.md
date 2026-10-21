@@ -56,3 +56,8 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 
 
 **2026-10-21 CPU 实测通过：** 已在真实 Linux CPU 的 PyTorch 2.2.0 + Ultralytics 8.4.0 环境，使用固定版本 ESPDet-Pico 构造十类网络，完成 224×224 随机输入前向及反向传播，自定义分类头 42 个参数张量产生有效梯度。[GitHub Actions 实测](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733)。**尚未测试你的 NVIDIA CUDA 机器、真实 YOLO 检测损失或 HaGRID 正式训练。**
+
+
+### P2-00 现有 Linux GTX 1060 Docker 训练机
+
+根据已有 SCRFD 自训练手册，可以直接复用 **Linux + 32GB 内存 + GTX 1060 6GB + Docker/NVIDIA Container Toolkit**，不必重新安装 WSL2，也不能覆盖 SCRFD 旧的 PyTorch 1.8/CUDA 11.1/MMCV 镜像。新增 [GTX 1060 专用 Docker 环境和验收指南](docs/P2_GTX1060_DOCKER.md)，新镜像使用 PyTorch 2.2.0 + CUDA 12.1 + Ultralytics 8.4.0。依次通过 `build → gpu → source → doctor → smoke` 验证，**当前 GitHub 只做离线合成检查，真实 1060 CUDA 仍待你在 Linux 主机上执行**；许可签核和真实数据验收之前不启动正式训练。

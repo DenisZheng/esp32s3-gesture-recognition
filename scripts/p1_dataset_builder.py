@@ -22,6 +22,7 @@ from pathlib import Path
 from scripts.data_contract import AnnotationError, CLASS_NAMES, SOURCE_TO_INDEX, assert_subject_disjoint
 from scripts.hagrid_p1 import ROOT, PreparationError, _approval, _check_sample
 from scripts.hagrid_policy import policy_sha256
+from scripts.hagrid_image_zip64 import ImageRangeError
 from scripts.p1_dataset_sources import (
     ByteBudget, SOURCES, SPLITS, SourceError, STEM, make_sources,
 )
@@ -298,7 +299,7 @@ def build_dataset(
             if dest.exists():
                 raise DatasetBuildError("Output directory appeared during build")
             stage.rename(dest)
-    except (SourceError, PreparationError) as exc:
+    except (SourceError, PreparationError, ImageRangeError) as exc:
         raise DatasetBuildError("Private source failed integrity/size/permission checks") from exc
     finally:
         if im:

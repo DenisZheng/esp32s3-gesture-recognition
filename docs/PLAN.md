@@ -116,3 +116,8 @@ The user can prepare Windows WSL2 Ubuntu/NVIDIA or Linux GPU ahead of dataset ap
 ### P1-05 ten-source automatic/manual dataset preparation (code + synthetic tests)
 
 New [operator guide](P1_DUAL_SOURCE_DATASET.md) and `p1_dataset_builder` support (1) auto HTTP Range with verified official ZIP indexes + private resumable cache, (2) manually downloaded per-class image ZIPs and original annotation ZIP, and (3) already-extracted directories. Ten-class output is frozen at 224x224, per-physical-hand YOLO detection; subject-disjoint original splits are independently checked across all 30 JSONs, unknown second hands reject whole frames and class-7 `no_gesture` remains a visible hand bbox. A **special ZIP32 path/root JPEG structure** for the official 2164-image `no_gesture` source is handled. Offline/synthetic CI validates conversion, guards and per-file hashes; **real user image download, license acceptance, all-ten visual signoff and final P1 QA are PENDING; P2 training NOT started**.
+
+
+### P1-06 complete human gesture review campaign — tooling only
+
+The [five-group P1-06 guide](P1_TEN_CLASS_VISUAL_REVIEW.md) and `p1_ten_review` support private train-only review of ten canonical sources + ten lookalike variants, with license-before-media, original ZIP archive index SHA256 pins for 20 total sources, transactional contact sheets, image-hash-bound reviewer decisions, and an explicitly **UNSIGNED/INVALID** final ten-class mapping draft. This closes the *tooling* gap between the earlier four-way number-two review and P1-05's need for all-ten mapping signoff. P1 real permission, actual photos, source dispute adjudication, data QA, P2 CUDA and training **remain open**.

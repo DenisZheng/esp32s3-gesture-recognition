@@ -46,3 +46,8 @@ The three no_gesture annotation JSONs alone total **1401844 compressed bytes**, 
 Provenance: https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39388994357
 
 See P1_DATA_TOOLING.md for the bounded HTTP Range reader and local-only data-validation commands.
+
+
+## Actual next owner action
+
+The original HaGRIDv2 custom English PDF has already been source-reviewed and its SHA256 pinned above; there is no outstanding technical document fetch. The remaining **human** research license signoff and potential commercial/privacy/model-weights legal review cannot be done by GitHub CI. After owner research authorization, start the [P1-06 five-group private train-only visual review](P1_TEN_CLASS_VISUAL_REVIEW.md) rather than trying to sign all ten class mappings without actual example images.

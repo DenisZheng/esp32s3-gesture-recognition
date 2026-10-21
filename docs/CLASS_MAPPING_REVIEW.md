@@ -36,3 +36,8 @@ The programmatic visual signoff now requires the private reviewer to list the fo
 ## Repeatable train-only evidence procedure
 
 [P1_VISUAL_REVIEW.md](P1_VISUAL_REVIEW.md) documents how to generate a private HTML contact sheet and bind explicit human match/mismatch/uncertain decisions to the actual source image hashes. The source tests are synthetic only; **actual HaGRIDv2 visual mapping signoff remains PENDING**. Do not train on `peace` as a negative until the numeral-two mapping is adjudicated.
+
+
+## P1-06 signed evidence workflow
+
+The [P1-06 campaign](P1_TEN_CLASS_VISUAL_REVIEW.md) groups all 20 required canonical and lookalike train photo sources into one/two/three/five/remaining. Each recorded human class decision must be reviewed against official ESP-DL figures and actual licensed per-hand boxes. A structural verifier reports uncertain primaries and possible aliases, while the consolidated mapping remains **deliberately unsigned, with all `approved:false`**. No code/CI may automatically approve `two_up→two`, `palm→five` or any output class.

@@ -106,3 +106,8 @@ Once the corresponding `train/<source>.json` annotation records have been fetche
 ## Recommended handoff: single local command instead of six manual extraction steps
 
 See [P1_ONE_CLICK_REVIEW.md](P1_ONE_CLICK_REVIEW.md). `scripts/p1_review_workflow.py` uses the same strict packet builder and review verifier and prepares all four number-two contrast classes within a **transactional private directory**, after actual research license acceptance. It never approves a mapping on its own and does not inspect val/test.
+
+
+## P1-06 all-ten follow-up
+
+The original four-way `p1_review_workflow.py` remains supported. For **all ten official classes plus ten similar hand-pose sources**, use the [P1-06 five-group campaign](P1_TEN_CLASS_VISUAL_REVIEW.md). The group packet tool requires actual local research-license acceptance, never uses held-out val/test images to select class mappings, binds human decisions to original SHA256 evidence, and produces only an **INVALID unsigned** all-ten mapping draft. It cannot claim P1 PASS.

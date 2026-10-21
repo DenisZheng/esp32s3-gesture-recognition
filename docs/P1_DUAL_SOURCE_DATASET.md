@@ -136,3 +136,8 @@ Output:
 ### Version identity: verified against the official HaGRIDv2 annotation link
 
 The ZIP fetched by existing `scripts/hagrid_zip_range.py` is the **official HaGRIDv2** `/datasets/hagrid_v2/annotations_with_landmarks/annotations.zip`, observed as **719,041,314 bytes / 121 ZIP members**. A distinct old HaGRID `/datasets/hagrid/hagrid_dataset_new_554800/annotations.zip` is only **34,971,848 bytes / 57 members** and **must not be silently substituted**. This comparison was done using public HEAD + 64KiB footer metadata only. The builder's `auto` uses the already-correct official v2 URL; manual ZIP mode rejects archives missing any of the ten source files across all three splits.
+
+
+## Preceding P1-06 visual signoff avoids circular approval
+
+P1-05 rightly requires actual all-ten source mapping and dataset rights approval before creating a training dataset. To gather permitted evidence *before* that mapping can be signed, use [P1-06's private five-group train-only review](P1_TEN_CLASS_VISUAL_REVIEW.md). It fetches only owner-authorized review images under the research license, compares 20 pose source categories and generates an **INVALID unsigned** all-ten mapping draft. Any `peace` versus `two_up` resolution requires a reviewed source-map PR before training.

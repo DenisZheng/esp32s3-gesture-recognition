@@ -283,6 +283,18 @@ def parse_image_index(central: bytes, count: int, source: str) -> dict[str, Imag
         if name == source + "/":
             cursor = end
             continue
+        if source == "no_gesture" and "/" in name:
+            # The exact SHA-pinned official 2166-entry ZIP32 contains two
+            # noncanonical nested JPEG entries in addition to 2164 root JPGs.
+            # Ignore them only as opaque metadata, never write those paths.
+            parts = name.split("/")
+            if (any(not part or part in (".", "..") or "\\" in part for part in parts)
+                    or flags & 1
+                    or method not in (0, 8)
+                    or (f[15] >> 16) & 0o170000 == 0o120000):
+                raise ImageRangeError("Unsafe nested no_gesture ZIP metadata")
+            cursor = end
+            continue
         prefix = "" if source == "no_gesture" else source + "/"
         if (
             not name.startswith(prefix) or not name.endswith(".jpg")

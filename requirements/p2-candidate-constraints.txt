@@ -1,0 +1,10 @@
+# P2-00 source-audited CANDIDATE, not a training-environment lock until
+# pinned ESPDet-Pico custom-head graph construction/backprop succeeds.
+# Python 3.10/3.11. Torch/torchvision pins follow ESP-Detection requirements.
+# Ultralytics v8.3.250 lacks Detect(...,reg_max=...), but v8.4.0 has it.
+# Install Torch CUDA wheels separately via official PyTorch index (see docs).
+torch==2.2.0
+torchvision==0.17.0
+numpy==1.24.4
+ultralytics==8.4.0
+opencv-python==4.11.0.86

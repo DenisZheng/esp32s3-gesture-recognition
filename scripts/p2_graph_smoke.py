@@ -67,6 +67,34 @@ def check_shapes(outputs) -> list[list[int]]:
     return shapes
 
 
+def inspect_training_dictionary(predictions) -> list:
+    """Ultralytics 8.4.x Detect.train() gives boxes/scores/feats, not a list.
+
+    This is a shape/schema check only; actual custom ESPDetect head outputs
+    still need a runtime check against each feature tensor in run().
+    """
+    if not isinstance(predictions, dict):
+        raise GraphSmokeError("Expected Ultralytics 8.4 training output dict")
+    boxes, scores, feats = (
+        predictions.get("boxes"), predictions.get("scores"), predictions.get("feats")
+    )
+    total_cells = sum(h * w for h, w in STAGE_SIZES)
+    if (
+        getattr(boxes, "shape", None) is None
+        or list(boxes.shape) != [1, 4, total_cells]
+        or getattr(scores, "shape", None) is None
+        or list(scores.shape) != [1, 10, total_cells]
+        or not isinstance(feats, (list, tuple))
+        or len(feats) != 3
+    ):
+        raise GraphSmokeError("Ultralytics boxes/scores/feats violate ten-class contract")
+    for i, (tensor, hw) in enumerate(zip(feats, STAGE_SIZES)):
+        shape = getattr(tensor, "shape", None)
+        if shape is None or len(shape) != 4 or list(shape)[0] != 1 or list(shape)[2:] != list(hw):
+            raise GraphSmokeError(f"Training feature level {i} has invalid resolution")
+    return list(feats)
+
+
 def run(upstream: Path, *, device: str = "cpu", seed: int = 20261021):
     if device not in ("cpu", "cuda") or not 0 <= seed < 2 ** 31:
         raise GraphSmokeError("Unsupported device or seed")
@@ -104,7 +132,20 @@ def run(upstream: Path, *, device: str = "cpu", seed: int = 20261021):
             optimizer = torch.optim.SGD(net.parameters(), lr=0.0001)
             optimizer.zero_grad(set_to_none=True)
             noise = torch.randn(1, 3, 224, 224, device=device)
-            stages = net(noise)
+            predictions = net(noise)
+            if not isinstance(predictions, dict):
+                raise GraphSmokeError("Expected Ultralytics 8.4 training output dictionary")
+            feats = inspect_training_dictionary(predictions)
+            last = net.model[-1]
+            if type(last).__name__ != "ESPDetect":
+                raise GraphSmokeError("Last model layer is not the ESPDet custom head")
+            # Re-run only the two small *custom* per-stage heads on their
+            # in-memory feature tensors. The original upstream's export method
+            # produces precisely these 4-box/10-class channel groups.
+            stages = [
+                torch.cat((last.cv2[i](feat), last.cv3[i](feat)), dim=1)
+                for i, feat in enumerate(feats)
+            ]
             shapes = check_shapes(stages)
             synthetic_objective = sum(v.square().mean() for v in stages)
             if not bool(torch.isfinite(synthetic_objective)):
@@ -113,6 +154,12 @@ def run(upstream: Path, *, device: str = "cpu", seed: int = 20261021):
             grads = [p.grad for p in net.parameters() if p.grad is not None]
             if not grads or not all(bool(torch.isfinite(g).all()) for g in grads):
                 raise GraphSmokeError("Missing/nonfinite synthetic gradient")
+            custom_cls_grad = [
+                p.grad for p in last.cv3.parameters()
+                if p.grad is not None and bool(torch.isfinite(p.grad).all())
+            ]
+            if not custom_cls_grad:
+                raise GraphSmokeError("Custom ten-class ESPDetect classification head has no gradient")
             optimizer.step()
             return {
                 "status": "SYNTHETIC_GRAPH_BACKPROP_ONLY_PASS",
@@ -125,6 +172,7 @@ def run(upstream: Path, *, device: str = "cpu", seed: int = 20261021):
                 "torch_version": importlib.metadata.version("torch"),
                 "ultralytics_version": importlib.metadata.version("ultralytics"),
                 "gradient_tensors": len(grads),
+                "custom_ten_class_head_gradients": len(custom_cls_grad),
                 "device": device,
                 "real_dataset_accessed": False,
                 "pretrained_weights_loaded": False,

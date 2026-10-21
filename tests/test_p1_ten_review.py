@@ -212,6 +212,87 @@ class PrivateReviewCampaignTests(unittest.TestCase):
                             per_source=amount)
                 call.assert_not_called()
 
+    def test_full_prepare_creates_real_synthetic_contact_sheet_transactionally(self):
+        out = self.root / "review-group-five"
+        def fake_annotations(sources, splits, output, license_ack, budget):
+            self.assertEqual(tuple(splits), ("train",))
+            files = {}
+            for source in sources:
+                folder = output / "train"
+                folder.mkdir(parents=True, exist_ok=True)
+                records = {}
+                for i in range(3):
+                    stem = f"FAKE_{source}_{i}"
+                    records[stem] = {
+                        "user_id": f"FAKE_PERSON_{source}_{i}",
+                        "labels": [source],
+                        "bboxes": [[0.12, 0.16, 0.30, 0.42]],
+                        "united_bbox": None, "united_label": None,
+                    }
+                (folder / f"{source}.json").write_text(json.dumps(records))
+                files[f"annotations/train/{source}.json"] = {"sha256": "synthetic"}
+            return {"files": files}
+
+        def fake_images(source, annotations, output, license_ack,
+                        per_source, max_transfer_mib, seed):
+            folder = output / source
+            folder.mkdir(parents=True, exist_ok=True)
+            for i in range(per_source):
+                (folder / f"FAKE_{source}_{i}.jpg").write_bytes(
+                    fictional_jpeg(f"FAKE_{source}_{i}")
+                )
+            return {"source": source, "train_only": True, "jpeg_count": per_source}
+
+        with patch("scripts.p1_ten_review.fetch_train_annotations",
+                   side_effect=fake_annotations):
+            with patch("scripts.p1_ten_review.fetch_image_subset",
+                       side_effect=fake_images):
+                result = prepare("five", out, self.license, per_source=3)
+        self.assertEqual(result["group"], "five")
+        self.assertTrue((out / "packet/index.html").is_file())
+        self.assertTrue((out / "packet/review.template.json").is_file())
+        self.assertTrue((out / "campaign.private.json").is_file())
+        template = json.loads((out / "packet/review.template.json").read_text())
+        self.assertTrue(all(x["decision"] == "pending"
+                            for x in template["decisions"]))
+        html = (out / "packet/index.html").read_text()
+        self.assertIn("palm", html)
+        self.assertIn("stop_inverted", html)
+        self.assertNotIn("FAKE_PERSON_", html)
+        self.assertFalse(result["p1_pass"])
+
+    def test_corrupt_synthetic_jpeg_prevents_group_publication(self):
+        out = self.root / "bad-photo-group"
+        def fake_annotations(sources, splits, output, license_ack, budget):
+            folder = output / "train"
+            folder.mkdir(parents=True, exist_ok=True)
+            files = {}
+            for source in sources:
+                (folder / f"{source}.json").write_text(json.dumps({
+                    f"FAKE_{source}_{i}": {
+                        "user_id": f"TEST_PERSON_{source}_{i}",
+                        "labels": [source],
+                        "bboxes": [[0.12, 0.16, 0.30, 0.42]],
+                        "united_bbox": None, "united_label": None,
+                    } for i in range(3)
+                }))
+                files[f"annotations/train/{source}.json"] = {}
+            return {"files": files}
+        def broken_images(source, annotations, output, license_ack,
+                          per_source, max_transfer_mib, seed):
+            folder = output / source
+            folder.mkdir(parents=True, exist_ok=True)
+            for i in range(per_source):
+                (folder / f"FAKE_{source}_{i}.jpg").write_bytes(b"not-a-JPEG")
+            return {"source": source, "train_only": True, "jpeg_count": per_source}
+        with patch("scripts.p1_ten_review.fetch_train_annotations",
+                   side_effect=fake_annotations):
+            with patch("scripts.p1_ten_review.fetch_image_subset",
+                       side_effect=broken_images):
+                with self.assertRaises(TenReviewError):
+                    prepare("one", out, self.license, per_source=3)
+        self.assertFalse(out.exists())
+
     def test_source_receipt_mismatch_fails_closed_and_discards_stage(self):
         out = self.root / "rollback"
         fake = {"files": {"annotations/train/one.json": {"sha256": "fake"}}}

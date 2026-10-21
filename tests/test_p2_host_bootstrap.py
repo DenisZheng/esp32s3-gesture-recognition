@@ -130,6 +130,41 @@ class SyntheticGraphContractTests(unittest.TestCase):
             with self.assertRaises(graph.GraphSmokeError):
                 graph.check_shapes(fake)
 
+    def test_ultralytics_84_training_dict_has_ten_class_aggregates(self):
+        pred = {
+            "boxes": SimpleNamespace(shape=(1, 4, 1029)),
+            "scores": SimpleNamespace(shape=(1, 10, 1029)),
+            "feats": [
+                SimpleNamespace(shape=(1, 48, 28, 28)),
+                SimpleNamespace(shape=(1, 64, 14, 14)),
+                SimpleNamespace(shape=(1, 96, 7, 7)),
+            ],
+        }
+        self.assertEqual(len(graph.inspect_training_dictionary(pred)), 3)
+
+    def test_reject_training_dict_if_only_one_or_eleven_class_scores(self):
+        for channel in (1, 11):
+            pred = {
+                "boxes": SimpleNamespace(shape=(1, 4, 1029)),
+                "scores": SimpleNamespace(shape=(1, channel, 1029)),
+                "feats": [
+                    SimpleNamespace(shape=(1, 48, 28, 28)),
+                    SimpleNamespace(shape=(1, 64, 14, 14)),
+                    SimpleNamespace(shape=(1, 96, 7, 7)),
+                ],
+            }
+            with self.assertRaises(graph.GraphSmokeError):
+                graph.inspect_training_dictionary(pred)
+
+    def test_reject_training_dict_missing_feature_scales(self):
+        pred = {
+            "boxes": SimpleNamespace(shape=(1, 4, 1029)),
+            "scores": SimpleNamespace(shape=(1, 10, 1029)),
+            "feats": [SimpleNamespace(shape=(1, 48, 28, 28))],
+        }
+        with self.assertRaises(graph.GraphSmokeError):
+            graph.inspect_training_dictionary(pred)
+
     def test_graph_rejects_wrong_number_of_stages(self):
         with self.assertRaises(graph.GraphSmokeError):
             graph.check_shapes([SimpleNamespace(shape=(1, 14, 28, 28))])

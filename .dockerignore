@@ -1,0 +1,6 @@
+# Minimal Docker build context: never include personal data, models or SCRFD.
+*
+!requirements/
+!requirements/p2-candidate-constraints.txt
+!docker/
+!docker/Dockerfile.p2-espdet-cu121

@@ -1,0 +1,29 @@
+# P2-00 host-only research container, independent of existing SCRFD.
+# Official PyTorch 2.2.0 CUDA 12.1 runtime, linux/amd64 manifest from Docker Hub.
+# Pascal GTX 1060 sm_61: CUDA 12.x, not CUDA 13.
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime@sha256:e5c32997194edfc6fb0235223d1cd0433056045a468e7dfeaac390a3fcf8ae6d
+
+LABEL org.opencontainers.image.title="ESPDet-Pico nc10 P2 host bootstrap"
+LABEL org.opencontainers.image.description="CUDA host checks only; no HaGRID media or training"
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    YOLO_AUTOINSTALL=False \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace/repo
+COPY requirements/p2-candidate-constraints.txt /opt/p2-candidate-constraints.txt
+
+# This exact base is CUDA-enabled; abort before adding pip packages if wrong.
+RUN python -c "import sys,torch,torchvision; assert sys.version_info[:2]==(3,10),sys.version; assert torch.__version__.split('+')[0]=='2.2.0',torch.__version__; assert torchvision.__version__.split('+')[0]=='0.17.0',torchvision.__version__; assert torch.version.cuda=='12.1',torch.version.cuda" \
+    && python -m pip install --no-cache-dir -c /opt/p2-candidate-constraints.txt \
+       "numpy==1.24.4" "ultralytics==8.4.0" "opencv-python==4.11.0.86" \
+    && python -m pip check \
+    && python -c "import torch,torchvision,numpy,cv2,ultralytics; assert torch.__version__.split('+')[0]=='2.2.0'; assert torchvision.__version__.split('+')[0]=='0.17.0'; assert torch.version.cuda=='12.1'; assert numpy.__version__=='1.24.4'; assert cv2.__version__=='4.11.0'; assert ultralytics.__version__=='8.4.0'"
+
+# No source/image/checkpoint COPY; runtime mounts an ignored local repo.
+CMD ["python", "-m", "scripts.p2_host_doctor", "plan"]

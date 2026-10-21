@@ -32,7 +32,7 @@ CANDIDATE_PINS = {
     "numpy": "1.24.4",
 }
 REQUIRED_PACKAGES = ("torch", "torchvision", "numpy", "ultralytics")
-MIN_ULTRALYTICS = (8, 3, 112)
+MIN_ULTRALYTICS = (8, 4, 0)
 TARGET_MODEL = "ESPDet-Pico"
 TARGET_CLASSES = 10
 TARGET_INPUT = (224, 224)
@@ -122,6 +122,7 @@ def offline_plan() -> dict:
         "recommended_host": "Linux x86_64 with NVIDIA CUDA; Windows WSL2 Ubuntu is preferred",
         "python_candidates": ["3.10", "3.11"],
         "official_upstream_candidates_not_validated": CANDIDATE_PINS,
+        "ultralytics_source_checked_candidate": "8.4.0 (NOT runtime-tested)",
         "ultralytics_requires_actual_reg_max_constructor_smoke": True,
         "model": TARGET_MODEL,
         "classes": TARGET_CLASSES,
@@ -156,7 +157,7 @@ def evaluate(
     if ul is not None:
         parsed = _version_tuple(ul)
         if parsed is None or parsed < MIN_ULTRALYTICS:
-            issues.append("Ultralytics does not meet the pinned ESP-Detection minimum")
+            issues.append("Ultralytics <8.4.0 lacks the ESPDetect reg_max constructor interface")
         if not detect_supports_reg_max:
             issues.append("Installed Ultralytics Detect.__init__ does not accept reg_max")
     if upstream_head != upstream_expected:

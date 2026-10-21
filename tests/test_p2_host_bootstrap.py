@@ -19,7 +19,7 @@ class HostDoctorTests(unittest.TestCase):
             "torch": "2.2.0+cu121",
             "torchvision": "0.17.0+cu121",
             "numpy": "1.24.4",
-            "ultralytics": "8.3.250",
+            "ultralytics": "8.4.0",
         }
         self.gpu = {
             "cuda_available": True, "mps_available": False,
@@ -78,7 +78,7 @@ class HostDoctorTests(unittest.TestCase):
         self.assertTrue(any("reg_max" in s for s in report["blockers"]))
 
     def test_old_ultralytics_version_fails_minimum(self):
-        pkg = dict(self.packages, ultralytics="8.2.99")
+        pkg = dict(self.packages, ultralytics="8.3.250")
         self.assertFalse(self.review(package_versions=pkg)["host_prerequisites_ready"])
 
     def test_vram_warning_not_forced_failure(self):
@@ -95,7 +95,7 @@ class HostDoctorTests(unittest.TestCase):
         self.assertEqual(report["status"], "HOST_PREREQUISITES_READY_FOR_SYNTHETIC_SMOKE")
 
     def test_package_versions_parser_accepts_cuda_suffix(self):
-        self.assertEqual(host._version_tuple("8.3.250+cu121"), (8, 3, 250))
+        self.assertEqual(host._version_tuple("8.4.0+cu121"), (8, 4, 0))
         self.assertIsNone(host._version_tuple("junk"))
 
     def test_source_sha_rejects_tampering(self):

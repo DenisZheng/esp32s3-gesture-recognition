@@ -100,3 +100,11 @@ The official HaGRIDv2 catalog has 34 raw sources. [HARD_NEGATIVES.md](HARD_NEGAT
 
 
 **P1 official annotation ZIP budget verification:** A metadata-only GitHub Actions run showed that the four train source JSONs occupy 54,388,405 compressed bytes / 323,899,528 uncompressed bytes. This exposed and resolved a real parser defect: an unselected, oversized *other* class previously caused the entire ZIP metadata walk to abort. Per-member caps now apply **only to requested JSONs**, and selected unsafe files still fail closed. Verified by synthetic CI and live metadata-only source inspection; **no individual annotation record or JPEG was downloaded**. [Local runbook](P1_ONE_CLICK_REVIEW.md).
+
+
+## P2-00 host readiness implementation slice (separate from formal P2 start)
+
+The user can prepare Windows WSL2 Ubuntu/NVIDIA or Linux GPU ahead of dataset approval. [P2 local environment setup](P2_HOST_SETUP.md) documents an explicit Python 3.10 venv, PyTorch 2.2.0 CUDA 12.1 candidate, exact pinned upstream clone, host doctor and an optional **synthetic-only** ten-output graph/backward smoke. Source audit found ESP-Detection requirements `ultralytics>=8.3.112` is insufficient: v8.3.112 and v8.3.250 lack the custom ESPDetect `reg_max` constructor parameter; v8.4.0 contains it, pending full runtime validation. **No real training until P1 license, ten-class mapping and data QA gates have signed PASS.**
+
+
+**P2-00 CPU source/graph compatibility tested (2026-10-21):** [GitHub Actions](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733) installed the exact candidate packages in Linux CPython3.10, cloned pinned ESP-Detection, and successfully ran the ten-class random-weight model with verified 224×224 multi-scale head channels and finite gradients (42 custom classification-head parameter tensors). **P2-00 CPU readiness PASS; user's NVIDIA CUDA host still PENDING; real training / P1 stage gates still BLOCKED.**

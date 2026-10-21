@@ -59,3 +59,11 @@ Index-only remote smoke tests establish that a 42.73 GB archive supports ranged 
 
 
 **P1 archive index selection regression:** An official annotations.zip contains large unrelated JSON entries. Metadata parsing must tolerate oversized **unselected** classes while rejecting requested files above the decode/download cap and honoring aggregate byte budget. This was verified on metadata-only official four-class selection (4 train members totaling 54,388,405 compressed bytes); real authorizations/data review remain pending.
+
+
+### P2-00 local-host bootstrap is not real training
+
+`p2_host_doctor` checks Python, packages, source SHA, `reg_max` and optional CUDA. `p2_graph_smoke` constructs ESPDet-Pico from a generated ten-class YAML and computes a single **random-noise mathematical gradient** without pretrained weights, human images, genuine target detection loss, saved checkpoint, mAP or board run. Its success is a host compatibility prerequisite only, not P1 license approval or P2 model training PASS. See [P2_HOST_SETUP.md](P2_HOST_SETUP.md).
+
+
+**Source-only CPU evidence:** [Actions run](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733) completed a real ten-class ESPDet-Pico synthetic forward/backward (not just offline unit tests). Exact Torch/Ultralytics CPU versions and stage shapes are recorded in `upstreams.lock.json`. **No real detection loss, dataset, GPU CUDA or CoreS3 metrics may be inferred.**

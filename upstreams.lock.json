@@ -44,7 +44,42 @@
     }
   ],
   "training_python_packages": {
-    "status": "pending_smoke_lock",
-    "note": "Upstream requirements include lower-bounded ultralytics and git ESP-PPQ; no untested exact Python package lock is claimed as proven."
+    "status": "cpu_synthetic_graph_backprop_pass;_cuda_and_real_detection_loss_pending",
+    "verified_on_utc": "2026-10-21",
+    "verified_cpu": {
+      "python": "3.10.22",
+      "torch": "2.2.0+cpu",
+      "torchvision": "0.17.0+cpu",
+      "ultralytics": "8.4.0",
+      "numpy": "1.24.4",
+      "opencv_python": "4.11.0.86",
+      "esp_detection_commit": "28de5902a357d99dd9a5db0f52905255641c5a78",
+      "test": "scratch 10-class 224x224 real network forward and synthetic mathematical backward",
+      "class_head_gradient_tensors": 42,
+      "raw_feature_stages": [
+        [
+          1,
+          14,
+          28,
+          28
+        ],
+        [
+          1,
+          14,
+          14,
+          14
+        ],
+        [
+          1,
+          14,
+          7,
+          7
+        ]
+      ],
+      "evidence_url": "https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733"
+    },
+    "cuda_status": "NOT_TESTED_ON_OWNER_GPU",
+    "actual_yolo_loss_and_labeled_dataset_training": "NOT_STARTED",
+    "note": "Source-only CPU graph smoke is real, but CUDA wheels and actual detection-loss/data training still need acceptance. P1 license/mapping/data QA remain blockers."
   }
 }

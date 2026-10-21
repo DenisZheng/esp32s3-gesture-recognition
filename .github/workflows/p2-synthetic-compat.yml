@@ -1,0 +1,40 @@
+name: P2 source-only ten-class CPU compatibility (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-ten-class-graph:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      YOLO_AUTOINSTALL: "False"
+      CUDA_VISIBLE_DEVICES: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: requirements/p2-candidate-constraints.txt
+      - name: Install PyTorch 2.2.0 and torchvision 0.17.0 CPU only
+        run: |
+          python -m pip install -U pip
+          python -m pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Install remaining pinned CPU compatibility candidates
+        run: |
+          python -m pip install -c requirements/p2-candidate-constraints.txt \
+            numpy==1.24.4 ultralytics==8.4.0 opencv-python==4.11.0.86
+          python -m pip check
+      - name: Clone exact pinned ESP-Detection source code, not model/data
+        run: |
+          git init external/esp-detection
+          git -C external/esp-detection fetch --depth=1 https://github.com/espressif/esp-detection.git 28de5902a357d99dd9a5db0f52905255641c5a78
+          git -C external/esp-detection checkout --detach FETCH_HEAD
+          test "$(git -C external/esp-detection rev-parse HEAD)" = "28de5902a357d99dd9a5db0f52905255641c5a78"
+      - name: Construct scratch nc10 real ESPDet graph and probe synthetic gradients
+        run: |
+          python -m scripts.p2_host_doctor check
+          python -m scripts.p2_graph_smoke run --device cpu
+      - name: Explicitly exclude full training and real private media
+        run: echo 'Synthetic-only CPU compatibility; NO licensed HaGRID data, NO pretrained weights, NO real YOLO training or GPU/device evidence.'

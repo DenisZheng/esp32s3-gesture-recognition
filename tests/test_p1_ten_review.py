@@ -141,6 +141,20 @@ class PrivateReviewCampaignTests(unittest.TestCase):
         with self.assertRaises(TenReviewError):
             verify("one", w, r)
 
+    def test_packet_group_substitution_fails_even_if_receipt_hash_changed(self):
+        w, signed = self.make_group("two")
+        manifest_path = w / "packet/packet.manifest.json"
+        receipt_path = w / "campaign.private.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["requested_sources"][0] = "one"
+        new_bytes = (json.dumps(manifest) + "\n").encode()
+        manifest_path.write_bytes(new_bytes)
+        receipt = json.loads(receipt_path.read_text())
+        receipt["packet_manifest_sha256"] = hashlib.sha256(new_bytes).hexdigest()
+        receipt_path.write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(TenReviewError, "source/split"):
+            verify("two", w, signed)
+
     def test_unsigned_template_cannot_be_verified(self):
         w, _ = self.make_group("five")
         with self.assertRaises(TenReviewError):

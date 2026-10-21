@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import tempfile
+import urllib.error
 import unittest
 import warnings
 import zipfile
@@ -23,7 +24,7 @@ from scripts.p1_dataset_builder import (
     DatasetBuildError, build_dataset, offline_plan, verify_output,
 )
 from scripts.p1_dataset_sources import (
-    ByteBudget, RemoteImages, SourceError, _atomic_private_write
+    ByteBudget, MeteredHTTPRange, RemoteImages, SourceError, _atomic_private_write
 )
 
 SOURCES = tuple(SOURCE_TO_INDEX)
@@ -266,6 +267,48 @@ class OfflineRemoteResumeTests(unittest.TestCase):
             p.write_bytes(b"tampered")
             with self.assertRaisesRegex(SourceError, "CRC invalid"):
                 reader.get("one", "SYNTHETIC")
+
+    def test_remote_503_range_retry_is_bounded_and_charged(self):
+        from scripts.hagrid_image_zip64 import ImageRangeError, HTTPRange
+        net = MeteredHTTPRange.__new__(MeteredHTTPRange)
+        net.budget = ByteBudget(20)
+        http = urllib.error.HTTPError(
+            "https://example.invalid/test", 503, "temporarily unavailable", {}, None
+        )
+        def retry_then_succeed(*_args):
+            if attempts[0] == 0:
+                attempts[0] += 1
+                try:
+                    raise http
+                except urllib.error.HTTPError as underlying:
+                    raise ImageRangeError("Image archive HTTP byte-range read failed") from underlying
+            return b"ABCD"
+        attempts = [0]
+        with patch.object(HTTPRange, "get", side_effect=retry_then_succeed):
+            with patch("scripts.p1_dataset_sources.time.sleep") as sleep:
+                self.assertEqual(net.get(10, 13), b"ABCD")
+                sleep.assert_called_once()
+        self.assertEqual(net.budget.used, 8)
+
+    def test_remote_non_transient_403_has_no_retry(self):
+        from scripts.hagrid_image_zip64 import ImageRangeError, HTTPRange
+        net = MeteredHTTPRange.__new__(MeteredHTTPRange)
+        net.budget = ByteBudget(20)
+        http = urllib.error.HTTPError(
+            "https://example.invalid/test", 403, "not authorized", {}, None
+        )
+        def deny(*_args):
+            try:
+                raise http
+            except urllib.error.HTTPError as underlying:
+                raise ImageRangeError("Image archive HTTP byte-range read failed") from underlying
+        with patch.object(HTTPRange, "get", side_effect=deny) as attempted:
+            with patch("scripts.p1_dataset_sources.time.sleep") as sleep:
+                with self.assertRaises(ImageRangeError):
+                    net.get(10, 13)
+                attempted.assert_called_once()
+                sleep.assert_not_called()
+        self.assertEqual(net.budget.used, 4)
 
     def test_atomic_cache_write_refuses_to_overwrite(self):
         with tempfile.TemporaryDirectory() as d:

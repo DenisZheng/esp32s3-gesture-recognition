@@ -100,3 +100,18 @@ jobs:
           assert pos==len(central)
           print(json.dumps({"source":source,"source_path":"official_hagrid_v2/hagrid_v2_zip","archive_bytes":net.size,"jpeg_entries":jpg,"index_bytes":cd_bytes,"index_sha256":hashlib.sha256(central).hexdigest(),"kinds":dict(kinds),"depths":dict(depths),"prefixes":dict(prefixes)},sort_keys=True))
           PY
+
+  exact-pinned-parser-all-ten:
+    if: contains(github.event.head_commit.message, '[probe-parser]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [one, two_up, three, four, palm, like, ok, no_gesture, call, dislike]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm pinned source directory without reading JPEG payload
+        env:
+          SOURCE: "${{ matrix.source }}"
+        run: python3 -m scripts.hagrid_image_zip64 inspect --source "$SOURCE"

@@ -20,8 +20,6 @@ import hashlib
 import json
 import os
 import tempfile
-from collections import Counter
-from datetime import date
 from pathlib import Path
 
 from scripts.data_contract import CLASS_NAMES, SOURCE_TO_INDEX
@@ -122,11 +120,20 @@ def _receipt(workspace: Path, group: str) -> dict:
     if manifest.is_symlink():
         raise TenReviewError("Private packet manifest symlink refused")
     try:
-        actual = hashlib.sha256(manifest.read_bytes()).hexdigest()
-    except OSError as exc:
-        raise TenReviewError("Group visual packet manifest missing") from exc
+        bytes_manifest = manifest.read_bytes()
+        actual = hashlib.sha256(bytes_manifest).hexdigest()
+        packet = json.loads(bytes_manifest.decode("utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise TenReviewError("Group visual packet manifest missing or malformed") from exc
     if actual != body.get("packet_manifest_sha256"):
         raise TenReviewError("Packet has changed after workspace publication")
+    if (not isinstance(packet, dict)
+            or packet.get("source_split") != "train"
+            or packet.get("requested_sources") != list(GROUPS[group])
+            or set(packet.get("annotation_file_sha256", {})) != {
+                f"train/{source}.json" for source in GROUPS[group]
+            }):
+        raise TenReviewError("Packet source/split provenance does not match group contract")
     return body
 
 

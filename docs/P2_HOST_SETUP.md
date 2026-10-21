@@ -78,3 +78,12 @@ Once your host passes, keep version evidence **locally, ignored by Git**:
 ## Formal P1 -> P2 training gate still closed
 
 Only after [Issue #2 license](https://github.com/DenisZheng/esp32s3-gesture-recognition/issues/2), [Issue #3 ten-class visual mapping](https://github.com/DenisZheng/esp32s3-gesture-recognition/issues/3) and [Issue #4 real-data review and subject-disjoint data](https://github.com/DenisZheng/esp32s3-gesture-recognition/issues/4) are approved may an actual training command run. Freeze the exact compatible package versions, CUDA/OS information, class mapping SHA, dataset manifest, split policy, random seed, optimizer and hyperparameters. Start with a bounded small-batch pilot, not upstream `epochs=1200,batch=128,device=cpu` defaults. Only real FP32 validation can establish hand/gesture accuracy; P3 ONNX/ESP-PPQ and P4 CoreS3 hardware acceptance are separate later milestones.
+
+
+## Verified public CPU graph compatibility — 2026-10-21
+
+In [GitHub Actions](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733), the exact pinned ESP-Detection source and **Python 3.10.22, torch 2.2.0+cpu, torchvision 0.17.0+cpu, numpy 1.24.4, Ultralytics 8.4.0 and OpenCV 4.11.0.86** passed `python -m pip check` and `python -m scripts.p2_graph_smoke run --device cpu`.
+
+**Actual evidence:** ten-class scratch ESPDet-Pico network instantiated; stage tensor shapes `(1,14,28,28)`, `(1,14,14,14)`, `(1,14,7,7)`; custom gesture-class head received **42 finite-gradient parameter tensors**; synthetic backward and SGD step succeeded. The changed Ultralytics 8.4 output dictionary (`boxes/scores/feats`) was explicitly handled, without patching third-party dependencies. No JPGs, annotations, pretrained weights or checkpoint were used.
+
+This supports a *CPU-verified compatibility baseline* for setting up your host. **NVIDIA CUDA on the owner's PC, a real detection training loss, and real licensed dataset training are not verified.** The candidate constraint file stays named `candidate` until these later gates pass.

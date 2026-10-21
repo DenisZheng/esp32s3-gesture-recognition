@@ -1,5 +1,6 @@
-# P2-00 source-audited CANDIDATE, not a training-environment lock until
-# pinned ESPDet-Pico custom-head graph construction/backprop succeeds.
+# P2-00 CPU-VERIFIED synthetic graph candidate (2026-10-21); CUDA GPU,
+# real detection-loss training, HaGRID data and full dependency reproducibility
+# are NOT yet validated. This is not a complete P2 training lock.
 # Python 3.10/3.11. Torch/torchvision pins follow ESP-Detection requirements.
 # Ultralytics v8.3.250 lacks Detect(...,reg_max=...), but v8.4.0 has it.
 # Install Torch CUDA wheels separately via official PyTorch index (see docs).

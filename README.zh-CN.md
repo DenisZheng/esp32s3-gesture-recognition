@@ -53,3 +53,6 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 ## P2-00 本地训练环境准备（不代表已开始 P2 正式训练）
 
 自训练 ESPDet-Pico 必须在电脑或云 GPU 上运行，ESP32-S3 只负责训练后量化模型推理。推荐 Windows + WSL2 Ubuntu + NVIDIA CUDA 或 Linux GPU。新增 [P2 本地训练环境与自检指南](docs/P2_HOST_SETUP.md)，提供 `python3 -m scripts.p2_host_doctor plan`、GPU 依赖自检和 `p2_graph_smoke` 单模型十类随机输入反向传播测试。已发现官方上游对 `ultralytics>=8.3.112` 的下限存在兼容性缺口，v8.4.0 的代码支持 ESPDet 所需 `reg_max` 参数，但尚需真正运行验证。P1 许可、真实手势语义及数据验收通过前不启动模型训练。
+
+
+**2026-10-21 CPU 实测通过：** 已在真实 Linux CPU 的 PyTorch 2.2.0 + Ultralytics 8.4.0 环境，使用固定版本 ESPDet-Pico 构造十类网络，完成 224×224 随机输入前向及反向传播，自定义分类头 42 个参数张量产生有效梯度。[GitHub Actions 实测](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733)。**尚未测试你的 NVIDIA CUDA 机器、真实 YOLO 检测损失或 HaGRID 正式训练。**

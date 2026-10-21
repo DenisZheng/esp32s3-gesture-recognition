@@ -122,7 +122,7 @@ def offline_plan() -> dict:
         "recommended_host": "Linux x86_64 with NVIDIA CUDA; Windows WSL2 Ubuntu is preferred",
         "python_candidates": ["3.10", "3.11"],
         "official_upstream_candidates_not_validated": CANDIDATE_PINS,
-        "ultralytics_source_checked_candidate": "8.4.0 (NOT runtime-tested)",
+        "ultralytics_source_checked_candidate": "8.4.0 (CPU synthetic graph tested; CUDA still pending)",
         "ultralytics_requires_actual_reg_max_constructor_smoke": True,
         "model": TARGET_MODEL,
         "classes": TARGET_CLASSES,

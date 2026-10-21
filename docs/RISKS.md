@@ -32,3 +32,6 @@ Scale: severity H/M/L; evidence state DONE = static inspection only unless marke
 | R23 | H | Fragmented P1 data commands could leave incomplete local sample directories, while older annotation extractor had no explicit CI download refusal | New transactional four-source local workflow, independent annotation+JPEG CI download bans, signed-license check before I/O, and offline integration regression tests | SOURCE + SYNTHETIC CI DONE; HUMAN AUTHORIZATION AND REAL IMAGES PENDING |
 
 | R24 | H | Pinned ESP-Detection `requirements.txt` accepts Ultralytics v8.3.x while ESPDetect calls parent `Detect(..., reg_max=1)`, absent in 8.3.112 and 8.3.250 but present in v8.4.0; Torch CUDA versions may also vary by GPU | Select source-audited Ultralytics 8.4.0 *candidate*, require exact source SHA/constructor checks and real synthetic CPU/GPU backprop before freezing dependency lock; no P1 bypass | VERSION MISMATCH VERIFIED; COMPLETE RUNTIME / OWNER GPU NOT YET ACCEPTED |
+
+
+**R24 update (2026-10-21):** The Ultralytics 8.4.0 candidate with pinned Torch 2.2.0 **passed an actual CPU synthetic forward/backward** for ESPDet-Pico `nc=10` with custom classification gradients. CUDA GPU on owner's machine and real data/loss remain open; do not call R24 fully closed. [CPU evidence](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733).

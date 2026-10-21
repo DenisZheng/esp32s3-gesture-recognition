@@ -92,7 +92,7 @@ class ZIP64ParsingTests(unittest.TestCase):
     def test_all_four_image_archives_have_immutable_index_metadata(self):
         self.assertEqual(set(IMAGE_URLS), set(PINNED_SIZES))
         self.assertEqual(set(IMAGE_URLS), set(PINNED_INDEX_SHA256))
-        self.assertEqual(len(IMAGE_URLS), 13)
+        self.assertEqual(len(IMAGE_URLS), 20)
         self.assertEqual(PINNED_SIZES["two_up"], 42_733_450_409)
         self.assertEqual(PINNED_SIZES["no_gesture"], 517_860_551)
         self.assertIn("/datasets/hagrid_v2/hagrid_v2_zip/no_gesture.zip",
@@ -129,6 +129,23 @@ class ZIP64ParsingTests(unittest.TestCase):
         self.assertEqual(set(index), set(names))
         for stem, m in index.items():
             self.assertEqual(read_jpeg(m, FakeTransport(z)), names[stem])
+
+    def test_new_root_level_variant_archives_never_allow_traversal(self):
+        from scripts.hagrid_image_zip64 import ROOT_MEMBER_SOURCES
+        self.assertEqual(ROOT_MEMBER_SOURCES, {
+            "no_gesture", "point", "three3", "three_gun"
+        })
+        for source in ("point", "three3", "three_gun"):
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as z:
+                z.writestr("safe.jpg", fake_jpeg("safe"))
+            data = buffer.getvalue()
+            from scripts.hagrid_image_zip64 import parse_zip_footer
+            start, size, count = parse_zip_footer(data, len(data))
+            members = parse_image_index(data[start:start+size], count, source)
+            self.assertEqual(set(members), {"safe"})
+            self.assertEqual(read_jpeg(members["safe"], FakeTransport(data)),
+                             fake_jpeg("safe"))
 
     def test_zip32_bad_traversal_member_rejected(self):
         raw = io.BytesIO()

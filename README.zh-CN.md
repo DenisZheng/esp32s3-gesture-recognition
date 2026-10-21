@@ -66,3 +66,8 @@ HaGRIDv2 官方共 **33 种手势 + 1 个 no_gesture，合计 34 类原始数据
 ### P1-05 双模式训练集准备
 
 已新增 [自动按需下载／手动 ZIP／本地目录统一构建指南](docs/P1_DUAL_SOURCE_DATASET.md)。`python3 -m scripts.p1_dataset_builder plan` 离线预览；经数据授权和十类真实视觉映射签核后，可用 `build --mode auto` 断点续取官方 ZIP 的目标图片，也可用 `--mode local-zip` 直接读取手动下载的每类原始 ZIP，或 `--mode local-dir` 读取已解压目录。输出标准 10 类 YOLO 检测训练集，按 `user_id` 校验原始 train/val/test 隔离，保留逐手检测框，哈希校验；**不能代替人工图片 QA、HaGRID 许可和正式训练验收**。`no_gesture` 使用官方另一地址的小 ZIP32 包，已专门兼容。
+
+
+### P1-06 十类完整视觉手势审核
+
+新增 [Linux 五组审核操作指南](docs/P1_TEN_CLASS_VISUAL_REVIEW.md) 和 `python3 -m scripts.p1_ten_review plan / prepare / verify / draft`。覆盖十个目标来源及十个近似手势，对照真人已授权 train 照片和官方 ESP-DL 手势图逐一判定，并使用图片 SHA256 绑定审核记录。七个新增对照 ZIP 归档仅做在线索引验证；最终只生成**无效且未签名**的十类映射草案，不能越过实际使用许可、人员审核或 P2 训练门禁。

@@ -108,3 +108,8 @@ For the existing **Linux / 32 GiB RAM / GTX 1060 6 GiB (Pascal sm_61)** machine 
 ### P1-05 manual ZIP or auto selective dataset builder
 
 [Dataset preparation manual](docs/P1_DUAL_SOURCE_DATASET.md): `python3 -m scripts.p1_dataset_builder plan` works offline; after real research license **and all-ten visual mapping** approval, `build --mode auto` uses pinned official ZIP64/ZIP32 indexes with resumable local cache, while `--mode local-zip` reads ten manually downloaded per-class ZIPs without extracting them, and `--mode local-dir` reads pre-extracted files. All modes generate the same nc10 YOLO dataset with subject-disjoint original splits and SHA256 verification, **marked pending actual human P1 QA**. No real JPG/annotation was fetched in CI, and no training is started.
+
+
+### P1-06 all-ten human gesture mapping review
+
+See [private Linux five-group review guide](docs/P1_TEN_CLASS_VISUAL_REVIEW.md). The offline `p1_ten_review plan`, license-gated `prepare`, integrity-bound human `verify`, and explicitly **INVALID UNSIGNED** mapping `draft` cover all ten target sources plus ten visual lookalike candidates. Seven new official image ZIP index digests were verified metadata-only. **No real images/owner license/mapping approval/P1 or P2 training acceptance occurred in GitHub CI.**

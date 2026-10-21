@@ -31,11 +31,15 @@ _PRIMARY_AND_CONTRAST = (
     "one", "two_up", "three", "four", "palm", "like", "ok",
     "no_gesture", "call", "dislike",
     "peace", "peace_inverted", "two_up_inverted",
+    "point", "mute", "stop", "stop_inverted", "three2", "three3", "three_gun",
 )
+ROOT_MEMBER_SOURCES = frozenset(("no_gesture", "point", "three3", "three_gun"))
+SPECIAL_URL_SOURCES = ROOT_MEMBER_SOURCES
+
 IMAGE_URLS = {
     source: (
-        HOST + "/datasets/hagrid_v2/hagrid_v2_zip/no_gesture.zip"
-        if source == "no_gesture"
+        HOST + "/datasets/hagrid_v2/hagrid_v2_zip/" + source + ".zip"
+        if source in SPECIAL_URL_SOURCES
         else HOST + "/datasets/hagrid/hagrid_dataset_new_554800/hagrid_dataset/"
         + source + ".zip"
     )
@@ -57,6 +61,13 @@ PINNED_SIZES = {
     "peace": 43_368_944_020,
     "peace_inverted": 41_355_311_911,
     "two_up_inverted": 41_724_228_996,
+    "point": 54_069_078_248,
+    "mute": 44_094_358_289,
+    "stop": 42_725_737_477,
+    "stop_inverted": 42_234_467_474,
+    "three2": 41_033_403_373,
+    "three3": 57_942_344_819,
+    "three_gun": 53_750_803_937,
 }
 PINNED_INDEX_SHA256 = {
     "one": "c8b911381d61ea4374913f576eeea1334b984391b0493770a0d5bbe8de383b14",
@@ -72,6 +83,13 @@ PINNED_INDEX_SHA256 = {
     "peace": "e0f44cfd7b293cecf8cb13579243fbf2481ace673255bb8af8d7c82db93d06c6",
     "peace_inverted": "2a6f997649011932cb1fe7ce30993f1ca21963cf38e8bd408adcde5ae9fdfd69",
     "two_up_inverted": "011fbeded458f8ef7031b23c4ef33c569bef0ed29899491e061b25de3bd92f6a",
+    "point": "7ad8d1cc56c251db6b609f5dcf1c201646d7e19aaf7f7922dfd30c554ffdeebd",
+    "mute": "330e63b59cbbe155baef0639a8fc131920b0750bb8cdc918f2466aebe26c10f9",
+    "stop": "b8ba745abef78a91ac5a9a9ee93d6f24bc274eab1155a925c016bc762ed7673f",
+    "stop_inverted": "3bbcf4d708e54b27c89140e73f8db86f4d2b918e866931850e5c89bd0b1fba4f",
+    "three2": "b6cef86c4f9da8eff41c6de0613eb568a08157a4a611ba60ba8b954604af98fd",
+    "three3": "c4a3131aa86f8b2b9edf2821a824272d314d5e5eb23302ca66183bcfe66443a4",
+    "three_gun": "64b641052f09bed35412db12000f8d1d3ed31b4e961e72a4403f25c1fbca7588",
 }
 MAX_ARCHIVE_BYTES = 80 * 1024 ** 3
 MAX_CENTRAL_BYTES = 8 * 1024 ** 2
@@ -295,7 +313,7 @@ def parse_image_index(central: bytes, count: int, source: str) -> dict[str, Imag
                 raise ImageRangeError("Unsafe nested no_gesture ZIP metadata")
             cursor = end
             continue
-        prefix = "" if source == "no_gesture" else source + "/"
+        prefix = "" if source in ROOT_MEMBER_SOURCES else source + "/"
         if (
             not name.startswith(prefix) or not name.endswith(".jpg")
             or not STEM_RE.fullmatch(name[len(prefix):-4])
@@ -398,7 +416,7 @@ def extract(source: str, annotations: Path, output: Path, license_ack: Path,
     except ValueError as exc:
         raise ImageRangeError("Owner research license approval is missing/invalid") from exc
     if source not in IMAGE_URLS:
-        raise ImageRangeError("Only four initial number-two comparison sources are available")
+        raise ImageRangeError("Source absent from the pinned P1 visual review registry")
     if not MIN_SELECTED <= per_source <= MAX_SELECTED:
         raise ImageRangeError("Require 3–20 different images for visual review")
     if not 1 <= max_transfer_mib <= 512 or not seed or len(seed) > 200:

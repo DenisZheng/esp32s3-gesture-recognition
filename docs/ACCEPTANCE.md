@@ -77,3 +77,8 @@ A prior SCRFD PyTorch1.8/CUDA11.1 image is NOT an ESPDet-Pico-compatible runtime
 ### P1-05 automatic/manual full ten-source dataset candidate
 
 The unified builder requires actual private owner research-use approval and all-ten source/gesture mapping review before reading any HaGRID JPEG or original person annotation. Local-dir, local-zip and automatic pinned ZIP Range inputs must yield identical strict per-hand nc10 YOLO labels and separated train/val/test subjects; unknown/unapproved second hands and compound boxes reject the full frame. Candidate output requires requested quotas in every source/split, SHA256 integrity evidence and no unreviewed `no_hand` negatives. Synthetic CI does not prove actual image decode or rights. Final stage still requires private human inspection/QA and **does not unlock training automatically**. [Instructions](P1_DUAL_SOURCE_DATASET.md).
+
+
+### P1-06 all-ten source semantic evidence (human gate remains)
+
+Five private, owner-research-license-gated train-only review workspaces must cover exactly ten intended source classes and ten quarantined lookalike contrasts, with per-hand boxes, SHA256-linked actual JPEGs and real human match/mismatch/uncertain notes. `p1_ten_review verify` enforces structural completeness and data integrity, not actual visual meanings. `draft` always generates a deliberately **UNSIGNED/INVALID** 10-class mapping ack. Human legal/source semantic acceptance is still required before P1-05 real dataset construction or P2 training. [P1-06 steps](P1_TEN_CLASS_VISUAL_REVIEW.md).

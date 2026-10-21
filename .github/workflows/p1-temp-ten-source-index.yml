@@ -80,6 +80,23 @@ jobs:
               cd_start,cd_bytes,count=h.parse_zip64_footer(tail,net.size)
           assert 0<cd_bytes<8*1024*1024 and cd_start+cd_bytes<net.size
           central=net.get(cd_start,cd_start+cd_bytes-1)
-          data=h.parse_image_index(central,count,source)
-          print(json.dumps({"source":source,"source_path":"official_hagrid_v2/hagrid_v2_zip","archive_bytes":net.size,"jpeg_entries":len(data),"index_bytes":cd_bytes,"index_sha256":hashlib.sha256(central).hexdigest()},sort_keys=True))
+          from collections import Counter
+          pos=0
+          kinds=Counter();depths=Counter();prefixes=Counter();jpg=0
+          for _ in range(count):
+              f=struct.unpack_from("<4s6H3I5H2I",central,pos)
+              assert f[0]==b"PK\x01\x02"
+              nl,el,cl=f[10:13]
+              name=central[pos+46:pos+46+nl].decode("utf-8" if f[3]&2048 else "cp437")
+              pos+=46+nl+el+cl
+              depth=name.count("/")
+              depths[depth]+=1
+              kinds["jpg" if name.endswith(".jpg") else ("folder" if name.endswith("/") else "other")]+=1
+              if name.endswith(".jpg"):
+                  jpg+=1
+                  seg=name.split("/")
+                  first=seg[0] if seg[0] in ("no_gesture","hagrid_dataset","dataset","images") else "unknown"
+                  prefixes[first]+=1
+          assert pos==len(central)
+          print(json.dumps({"source":source,"source_path":"official_hagrid_v2/hagrid_v2_zip","archive_bytes":net.size,"jpeg_entries":jpg,"index_bytes":cd_bytes,"index_sha256":hashlib.sha256(central).hexdigest(),"kinds":dict(kinds),"depths":dict(depths),"prefixes":dict(prefixes)},sort_keys=True))
           PY

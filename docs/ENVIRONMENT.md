@@ -20,3 +20,8 @@
 ## Input-shape reproducibility
 
 Baseline model input **224x224x3** (complete scene). Official 128x128 MobileNetV2 operates on cropped hand ROI in the **two-model** reference and is not used here. Freeze the model input and preprocessor shape at each experiment; see [INPUT_RESOLUTION.md](INPUT_RESOLUTION.md).
+
+
+## P2-00 host bootstrapping (safe before P1 license signoff)
+
+Use the [P2_HOST_SETUP](P2_HOST_SETUP.md) instructions to install WSL2 Ubuntu/Linux NVIDIA GPU Python 3.10 and the exact **candidate** Torch/Torchvision/NumPy/Ultralytics packages under a venv. The pinned ESP-Detection custom head calls `Detect(nc=...,reg_max=1,ch=...)`, which **Ultralytics v8.3.112/v8.3.250 lacks**; v8.4.0 exposes this parameter. `scripts/p2_host_doctor.py` checks package versions, exact git HEAD, CUDA and API shape. `scripts/p2_graph_smoke.py` builds only a **random-weight** nc10 net and tests synthetic noise gradient; P2 real data/training and P3 conversion remain blocked by P1 human acceptance. The candidate file `requirements/p2-candidate-constraints.txt` does NOT claim a proven lock until a real compatibility smoke passes.

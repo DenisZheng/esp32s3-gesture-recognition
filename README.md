@@ -90,3 +90,8 @@ The [selective HaGRID ZIP64 JPEG workflow](docs/P1_IMAGE_ZIP64.md) allows an **a
 
 
 **Next local handoff:** [P1 one-command private gesture review](docs/P1_ONE_CLICK_REVIEW.md) combines licensed train annotation range reads, four locked ZIP64 image archive reads, private HTML cards and structural signoff verification into a rollback-safe local workflow. Use `python3 -m scripts.p1_review_workflow plan` for a truly offline preview. **No real HaGRID photo was used in this development slice.**
+
+
+## P2-00 local workstation setup (while P1 human gate is still open)
+
+**Training will run on a PC/cloud GPU, NOT on the ESP32-S3.** For Windows + NVIDIA prefer WSL2 Ubuntu with Python 3.10 and CUDA-enabled PyTorch. [P2 local GPU setup guide](docs/P2_HOST_SETUP.md) explains venv dependencies and commands. `python3 -m scripts.p2_host_doctor plan` needs neither CUDA nor network; `python3 -m scripts.p2_graph_smoke plan` is also offline. Candidate Ultralytics **v8.4.0** has the `reg_max` API missing in v8.3.x, but actual source-model graph compatibility must pass before a final lock is claimed. **No P1 waiver, HaGRID samples or real model training is created by these checks.**

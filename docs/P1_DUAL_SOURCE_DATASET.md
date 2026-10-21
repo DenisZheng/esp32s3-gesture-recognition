@@ -131,3 +131,8 @@ Output:
 - The auto per-image resume cache checks official ZIP CRC32 and source size before reuse and the final dataset hashes every included image/label. A corrupt cache fails until the operator removes/reacquires it; no silent bypass.
 - Disk usage can reach many gigabytes. `--max-transfer-gib` and `--max-output-gib` fail closed, rather than spilling disk. Start with a **small authorized subset**, record download time, rejected counts, photo decode and GPU RAM.
 - This first P1-05 slice intentionally covers only the **ten canonical source candidates**. Optional seven reviewed hard-negative sources, standalone hand-free negatives, and alternative `peace`→`two` mapping are separate human-reviewed dataset revisions, never auto-inferred.
+
+
+### Version identity: verified against the official HaGRIDv2 annotation link
+
+The ZIP fetched by existing `scripts/hagrid_zip_range.py` is the **official HaGRIDv2** `/datasets/hagrid_v2/annotations_with_landmarks/annotations.zip`, observed as **719,041,314 bytes / 121 ZIP members**. A distinct old HaGRID `/datasets/hagrid/hagrid_dataset_new_554800/annotations.zip` is only **34,971,848 bytes / 57 members** and **must not be silently substituted**. This comparison was done using public HEAD + 64KiB footer metadata only. The builder's `auto` uses the already-correct official v2 URL; manual ZIP mode rejects archives missing any of the ten source files across all three splits.

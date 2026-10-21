@@ -112,7 +112,9 @@ class DockerHostScaffoldingTests(unittest.TestCase):
 
     def test_context_excludes_everything_except_public_constraints(self):
         contents = (ROOT / ".dockerignore").read_text(encoding="utf-8")
-        self.assertTrue(contents.splitlines()[1].strip() == "*")
+        active = [x.strip() for x in contents.splitlines() if x.strip() and not x.lstrip().startswith("#")]
+        self.assertEqual(active[0], "*")
+        self.assertEqual(active, ["*", "!requirements/", "!requirements/p2-candidate-constraints.txt"])
         self.assertIn("!requirements/p2-candidate-constraints.txt", contents)
         self.assertNotIn("!data/", contents)
         self.assertNotIn("!external/", contents)

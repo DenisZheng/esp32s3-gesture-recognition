@@ -1,0 +1,5 @@
+# Strict allowlist for Docker build context; no SCRFD, HaGRID, data, models.
+# Docker automatically passes the Dockerfile itself as build metadata.
+*
+!requirements/
+!requirements/p2-candidate-constraints.txt

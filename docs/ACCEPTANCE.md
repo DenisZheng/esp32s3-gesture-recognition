@@ -67,3 +67,8 @@ Index-only remote smoke tests establish that a 42.73 GB archive supports ranged 
 
 
 **Source-only CPU evidence:** [Actions run](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733) completed a real ten-class ESPDet-Pico synthetic forward/backward (not just offline unit tests). Exact Torch/Ultralytics CPU versions and stage shapes are recorded in `upstreams.lock.json`. **No real detection loss, dataset, GPU CUDA or CoreS3 metrics may be inferred.**
+
+
+### P2-00 separate GTX1060 Docker GPU gate
+
+A prior SCRFD PyTorch1.8/CUDA11.1 image is NOT an ESPDet-Pico-compatible runtime. The separate [GTX1060 Linux Docker workflow](P2_GTX1060_DOCKER.md) must pass a real build and all of `p2_docker_host.sh gpu` (sm_61/6GiB approximate, CUDA12.1 matmul + cuDNN backward), `source` (pinned source), `doctor` (Torch/Ultralytics/CUDA) and `smoke` (random 224px nc10 CUDA graph/backprop) on the owner's GPU. Offline Bash syntax tests are NOT a substitute. Save non-sensitive CUDA evidence locally, do not include HaGRID photos or weights in GitHub. **P1 human gates still block real training.**

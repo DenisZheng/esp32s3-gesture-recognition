@@ -108,3 +108,6 @@ The user can prepare Windows WSL2 Ubuntu/NVIDIA or Linux GPU ahead of dataset ap
 
 
 **P2-00 CPU source/graph compatibility tested (2026-10-21):** [GitHub Actions](https://github.com/DenisZheng/esp32s3-gesture-recognition/actions/runs/39523052733) installed the exact candidate packages in Linux CPython3.10, cloned pinned ESP-Detection, and successfully ran the ten-class random-weight model with verified 224×224 multi-scale head channels and finite gradients (42 custom classification-head parameter tensors). **P2-00 CPU readiness PASS; user's NVIDIA CUDA host still PENDING; real training / P1 stage gates still BLOCKED.**
+
+
+**P2-00 owner hardware specialization — GTX1060 Linux Docker (2026-10-21):** The owner has an existing 32GiB RAM Linux GTX1060 6GiB Pascal sm_61 system with a proven SCRFD Docker+NVIDIA runtime workflow. New [GTX1060 Docker guide](P2_GTX1060_DOCKER.md), separate digest-pinned PyTorch2.2/CUDA12.1 image, host UID/GID mount wrapper, real CUDA matmul/conv gradient probe and 13 offline tests were added. No changes to prior SCRFD image or work_dirs. **Docker build and GTX1060 GPU execution on owner host remain PENDING**, despite the previously verified generic CPU nc10 source graph. Real P2 training is still blocked by P1 permission/visual/data acceptance.

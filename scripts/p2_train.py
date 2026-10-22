@@ -96,7 +96,15 @@ def check_dataset(data: Path) -> dict:
     )
     if root_line is None:
         raise TrainError("dataset.yaml missing a `path:` root")
-    declared = json.loads(root_line.split(":", 1)[1].strip().strip("'\""))
+    declared = root_line.split(":", 1)[1].strip()
+    # Ultralytics writes either a bare path, a quoted path, or a JSON string.
+    if declared[:1] in ("'", '"'):
+        declared = declared.strip("'\"")
+    elif declared.startswith("={"):
+        raise TrainError("Unsupported multi-key dataset root mapping")
+    if not declared:
+        raise TrainError("dataset.yaml has an empty `path:` root")
+    declared = os.path.expandvars(os.path.expanduser(declared))
     root = Path(declared)
     if not root.is_absolute():
         root = (base / root).resolve()
@@ -213,6 +221,17 @@ def _common_kwargs(args) -> dict:
         fliplr=0.5,
         flipud=0.0,
         close_mosaic=args.close_mosaic,
+        # `optimizer=auto` builds MuSGD parameter groups that miss the ESPDet
+        # custom modules (observed on the RTX 4080 host: "0 weight" groups), so
+        # every convolution weight stayed frozen while the loss curve still
+        # looked plausible and best.pt was byte-identical to initialisation.
+        # Pin an explicit optimizer so all parameters get registered.
+        optimizer=args.optimizer,
+        lr0=args.lr0,
+        lrf=args.lrf,
+        momentum=0.9,
+        weight_decay=0.0005,
+        cos_lr=False,
     )
 
 
@@ -328,7 +347,9 @@ def run_train(args) -> dict:
             "epochs": args.epochs,
             "batch": args.batch,
             "workers": args.workers,
-            "optimizer": "auto",
+            "optimizer": args.optimizer,
+            "lr0": args.lr0,
+            "lrf": args.lrf,
             "amp": args.amp,
             "seed": args.seed,
             "mosaic": args.mosaic,
@@ -438,6 +459,10 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--amp", action="store_true", help="Off by default: FP32 baseline")
         p.add_argument("--mosaic", type=float, default=1.0)
         p.add_argument("--close-mosaic", type=int, default=0)
+        p.add_argument("--optimizer", default="SGD",
+                       help="Explicit optimiser; 'auto' freezes ESPDet custom weights")
+        p.add_argument("--lr0", type=float, default=0.01)
+        p.add_argument("--lrf", type=float, default=0.01)
 
     p_probe = sub.add_parser("probe", help="bounded real-loss probe (P2-01)")
     shared(p_probe)

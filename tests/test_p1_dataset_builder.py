@@ -30,7 +30,7 @@ from scripts.p1_dataset_sources import (
 SOURCES = tuple(SOURCE_TO_INDEX)
 COUNTS = {"train": 2, "val": 1, "test": 1}
 ALIASES = {
-    "two_up": ["peace", "peace_inverted", "two_up_inverted"],
+    "peace": ["two_up", "peace_inverted", "two_up_inverted"],
     "palm": ["stop", "stop_inverted"],
     "three": ["three2", "three3", "three_gun"],
     "one": ["point", "mute"],

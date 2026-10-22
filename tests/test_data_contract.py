@@ -21,7 +21,7 @@ class DatasetContractTests(unittest.TestCase):
 
     def test_two_hands_two_boxes(self):
         rows = strict_hand_labels(
-            [[0.1, 0.2, 0.2, 0.25], [0.55, 0.5, 0.2, 0.2]], ["two_up", "no_gesture"]
+            [[0.1, 0.2, 0.2, 0.25], [0.55, 0.5, 0.2, 0.2]], ["peace", "no_gesture"]
         )
         self.assertEqual(len(rows), 2)
         self.assertTrue(rows[0].startswith("1 "))

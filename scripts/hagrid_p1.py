@@ -92,7 +92,8 @@ def _approval(path: Path, kind: str) -> dict:
             # Require the reviewer to explicitly compare alternatives instead of
             # accepting a plausible source solely by its folder name.
             near_aliases = {
-                "two_up": {"peace", "peace_inverted", "two_up_inverted"},
+                # Owner visual review 2026-10-22: class-1 `two` is HaGRID `peace`.
+                "peace": {"two_up", "two_up_inverted", "peace_inverted"},
                 "palm": {"stop", "stop_inverted"},
                 "three": {"three2", "three3", "three_gun"},
                 "one": {"point", "mute"},

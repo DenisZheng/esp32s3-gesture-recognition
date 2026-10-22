@@ -75,7 +75,9 @@ class VisualReviewPacketTests(unittest.TestCase):
             row["reviewed_packet_ids"] = ids
             row["official_reference_checked"] = True
             row["comparative_notes"] = "Synthetic test explicitly compares finger separation, no real people."
-            row["decision"] = "match" if source == "two_up" else "mismatch"
+            # Owner visual review 2026-10-22: `peace` is the reviewed class-1
+            # `two` source; all other number-two shapes are contrasts.
+            row["decision"] = "match" if source == "peace" else "mismatch"
         if decisions:
             for source, value in decisions.items():
                 next(row for row in template["decisions"] if row["source"] == source)[

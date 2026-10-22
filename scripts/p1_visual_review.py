@@ -26,9 +26,13 @@ from scripts.hagrid_p1 import PreparationError, ROOT, _approval
 from scripts.hagrid_policy import OFFICIAL_SOURCES, read_policy, validate_requested_sources
 
 SAFE_STEM = re.compile(r"^[A-Za-z0-9_-]+$")
-DEFAULT_SOURCES = ("two_up", "peace", "peace_inverted", "two_up_inverted")
+# Owner visual review 2026-10-22: `peace` leads the group because it is now
+# the reviewed class-1 `two` source; the other shapes are audit contrasts.
+DEFAULT_SOURCES = ("peace", "two_up", "peace_inverted", "two_up_inverted")
 NEEDED_CONTRASTS = {
-    "two_up": ("peace", "peace_inverted", "two_up_inverted"),
+    # Owner visual review 2026-10-22 selected `peace` as class-1 `two`; the
+    # other number-two shapes remain mandatory contrast references.
+    "peace": ("two_up", "two_up_inverted", "peace_inverted"),
     "palm": ("stop", "stop_inverted"),
     "three": ("three2", "three3", "three_gun"),
     "one": ("point", "mute"),

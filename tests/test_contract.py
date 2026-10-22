@@ -16,7 +16,9 @@ class ContractTests(unittest.TestCase):
     def test_classes_and_sources(self):
         self.assertEqual(len(CLASS_NAMES), 10)
         self.assertEqual(len(SOURCE_TO_INDEX), 10)
-        self.assertEqual(SOURCE_TO_INDEX["two_up"], 1)
+        # Owner visual review 2026-10-22: ESP-DL "two" V sign == HaGRID `peace`.
+        self.assertEqual(SOURCE_TO_INDEX["peace"], 1)
+        self.assertNotIn("two_up", SOURCE_TO_INDEX)
         self.assertEqual(SOURCE_TO_INDEX["palm"], 4)
         self.assertEqual(SOURCE_TO_INDEX["no_gesture"], 7)
         self.assertNotIn("no_hand", SOURCE_TO_INDEX)

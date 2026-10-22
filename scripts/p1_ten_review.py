@@ -39,7 +39,7 @@ SCHEMA = 1
 # real visible-hand review. Here they are comparison references ONLY.
 GROUPS = {
     "one": ("one", "point", "mute"),
-    "two": ("two_up", "peace", "peace_inverted", "two_up_inverted"),
+    "two": ("peace", "two_up", "peace_inverted", "two_up_inverted"),
     "three": ("three", "three2", "three3", "three_gun"),
     "five": ("palm", "stop", "stop_inverted"),
     "remaining": ("four", "like", "ok", "no_gesture", "call", "dislike"),

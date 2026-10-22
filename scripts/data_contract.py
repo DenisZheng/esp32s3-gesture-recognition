@@ -13,7 +13,12 @@ CLASS_NAMES = (
 )
 SOURCE_TO_INDEX = {
     "one": 0,
-    "two_up": 1,
+    # ESP-DL v3.3.14 reference "two" is a separated V sign. Owner visual
+    # review on 2026-10-22 (P1-06 group "two", 24 licensed train samples across
+    # two_up / peace / peace_inverted / two_up_inverted) selected HaGRID
+    # `peace`; the previous tentative `two_up` (index+collinear fingers) does
+    # not match. Changing this requires the P1-06 re-review and a policy PR.
+    "peace": 1,
     "three": 2,
     "four": 3,
     "palm": 4,

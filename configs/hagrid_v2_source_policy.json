@@ -42,7 +42,7 @@
   ],
   "primary_sources": [
     "one",
-    "two_up",
+    "peace",
     "three",
     "four",
     "palm",
@@ -62,9 +62,9 @@
     "thumb_index"
   ],
   "lookalike_quarantine": [
-    "peace",
-    "peace_inverted",
+    "two_up",
     "two_up_inverted",
+    "peace_inverted",
     "three2",
     "three3",
     "three_gun",
@@ -84,7 +84,7 @@
   ],
   "no_hand_is_model_class": false,
   "hard_negative_output": "no_gesture",
-  "warning_two_mapping": "ESP-DL two shows a separated V sign; HaGRID peace may align better than current tentative two_up. No negatives from lookalike_quarantine until shape mapping is resolved and the versioned policy is revised.",
+  "warning_two_mapping": "RESOLVED 2026-10-22 by owner visual review of 24 licensed train samples: ESP-DL v3.3.14 \"two\" is a separated V sign matching HaGRID `peace`, not `two_up`. Mapping changed two_up->peace in a policy PR; two_up and its inverted variant moved to lookalike_quarantine. `peace_inverted` stays quarantined (inverted V is not the target pose).",
   "official_gesture_figure": "https://github.com/espressif/esp-dl/blob/v3.3.14/examples/hand_gesture_recognition/gestures.png",
   "hagrid_gesture_figure": "https://github.com/hukenovs/hagrid/blob/Hagrid_v2-1M/images/gestures.png",
   "policy_status": "CANDIDATES_ONLY_NO_AUTOMATIC_APPROVAL"

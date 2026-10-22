@@ -45,14 +45,24 @@ class SourcePolicyTests(unittest.TestCase):
     def test_ten_output_mapping_remains_unchanged(self):
         mapping = SOURCE_TO_INDEX
         self.assertEqual(mapping["no_gesture"], 7)
-        self.assertEqual(mapping["two_up"], 1)
+        # Owner visual review 2026-10-22: ESP-DL "two" is a separated V sign.
+        self.assertEqual(mapping["peace"], 1)
+        self.assertNotIn("two_up", mapping)
         self.assertEqual(mapping["palm"], 4)
 
-    def test_peace_is_under_visual_review_not_background(self):
-        self.assertIn("peace", read_policy()["lookalike_quarantine"])
-        self.assertIn("peace_inverted", read_policy()["lookalike_quarantine"])
+    def test_peace_is_primary_but_inverted_and_two_up_quarantined(self):
+        p = read_policy()
+        self.assertIn("peace", p["primary_sources"])
+        for source in ("palm", "peace", "one", "three", "four", "like", "ok",
+                       "no_gesture", "call", "dislike"):
+            self.assertIn(source, p["primary_sources"])
+        self.assertIn("peace_inverted", p["lookalike_quarantine"])
+        self.assertIn("two_up", p["lookalike_quarantine"])
+        self.assertIn("two_up_inverted", p["lookalike_quarantine"])
         with self.assertRaises(PolicyError):
-            validate_requested_sources(("peace",), conversion=True)
+            validate_requested_sources(("peace_inverted",), conversion=True)
+        with self.assertRaises(PolicyError):
+            validate_requested_sources(("two_up",), conversion=True)
 
     def test_compound_hand_heart_cannot_be_auto_converted(self):
         self.assertIn("hand_heart", read_policy()["compound_quarantine"])

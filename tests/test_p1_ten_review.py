@@ -32,7 +32,7 @@ class ReviewCampaignContractTests(unittest.TestCase):
         self.assertEqual(plan["unique_source_folders"], 20)
         self.assertEqual(plan["gesture_output_classes"], list(CLASS_NAMES))
         self.assertEqual(plan["groups"]["two"], [
-            "two_up", "peace", "peace_inverted", "two_up_inverted"
+            "peace", "two_up", "peace_inverted", "two_up_inverted"
         ])
         self.assertFalse(plan["dataset_and_model_training_authorized"])
 
@@ -41,7 +41,7 @@ class ReviewCampaignContractTests(unittest.TestCase):
         self.assertEqual(len(ALL_SOURCES), 20)
         self.assertEqual(len(set(ALL_SOURCES)), 20)
         self.assertEqual(set(SOURCE_TO_INDEX) & set(
-            ("peace", "three2", "stop", "point")), set()
+            ("two_up", "peace_inverted", "three2", "stop", "point")), set()
         )
         self.assertEqual(set(GROUPS), {
             "one", "two", "three", "five", "remaining"

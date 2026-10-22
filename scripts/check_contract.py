@@ -12,7 +12,7 @@ NAMES = [
     "one", "two", "three", "four", "five", "like", "ok", "no_gesture", "call", "dislike"
 ]
 SOURCES = [
-    "one", "two_up", "three", "four", "palm", "like", "ok", "no_gesture", "call", "dislike"
+    "one", "peace", "three", "four", "palm", "like", "ok", "no_gesture", "call", "dislike"
 ]
 UPSTREAM_IDS = {"esp-detection", "esp-dl", "esp-ppq", "hagrid", "esp-idf"}
 
@@ -31,7 +31,8 @@ def check() -> None:
     assert cfg["negative_background_label"] == "no_hand"
     assert cfg["negative_background_is_detection_class"] is False
     assert cfg["two_hand_joint_box_allowed"] is False
-    assert all(c["review"] in {"pending", "pending_visual_confirmation", "approved"} for c in cfg["classes"]), (
+    assert all(c["review"] in {"pending", "pending_visual_confirmation", "approved",
+                              "owner_visual_review_2026-10-22"} for c in cfg["classes"]), (
         "Unknown class mapping review state"
     )
 
@@ -58,7 +59,9 @@ def check() -> None:
     assert set.union(*group_sets) == set(taxonomy["raw_sources"])
     assert sum(len(s) for s in group_sets) == 34
     assert group_sets[0] == set(SOURCES)
-    assert {"peace", "peace_inverted", "two_up_inverted"} <= group_sets[2]
+    # Owner review 2026-10-22 moved class-1 `two` from two_up to peace; the
+    # remaining number-two lookalikes must still be quarantined.
+    assert {"peace_inverted", "two_up", "two_up_inverted"} <= group_sets[2]
     assert taxonomy["model_class_count"] == 10
     assert taxonomy["no_hand_is_model_class"] is False
     exp = json.loads((ROOT / "experiments/templates/experiment.json").read_text(encoding="utf-8"))

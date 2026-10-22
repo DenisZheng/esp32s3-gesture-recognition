@@ -77,8 +77,15 @@ def read_policy(path: Path = POLICY_FILE) -> dict:
     ):
         raise PolicyError("Class policy has missing, repeated or invalid sources")
     # These particular aliases MUST NOT be silently relabeled to class 7:
-    if not {"peace", "peace_inverted", "two_up_inverted"}.issubset(groups[2]):
+    # `peace` is now the class-1 primary after the owner's 2026-10-22 visual
+    # review, so the quarantine set changes to the remaining number-two
+    # lookalikes. The invariant is preserved (they stay out of the model
+    # contract), not removed: every non-primary two-like alias must still be
+    # quarantined, and `peace` must be the sole two source in primary_sources.
+    if not {"peace_inverted", "two_up", "two_up_inverted"}.issubset(groups[2]):
         raise PolicyError("Potential number-two aliases must stay quarantined")
+    if "peace" not in groups[0] or SOURCE_TO_INDEX.get("peace") != 1:
+        raise PolicyError("`peace` must be the reviewed class-1 two source")
     if not {"hand_heart", "hand_heart2", "xsign"}.issubset(groups[3]):
         raise PolicyError("Compound two-hand classes must stay quarantined")
     return doc

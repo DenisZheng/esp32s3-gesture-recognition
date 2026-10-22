@@ -51,7 +51,7 @@ class HaGRIDP1Tests(unittest.TestCase):
                 {"source": source, "output": CLASS_NAMES[i],
                  "approved": True, "samples_reviewed": 3, "official_reference_checked": True,
                  "contrasts_reviewed": {
-                     "two_up": ["peace", "peace_inverted", "two_up_inverted"],
+                     "peace": ["two_up", "peace_inverted", "two_up_inverted"],
                      "palm": ["stop", "stop_inverted"],
                      "three": ["three2", "three3", "three_gun"],
                      "one": ["point", "mute"],
@@ -164,7 +164,7 @@ class HaGRIDP1Tests(unittest.TestCase):
     def test_two_mapping_requires_review_of_peace_variants(self):
         review = json.loads(self.mapping.read_text())
         for row in review["classes"]:
-            if row["source"] == "two_up":
+            if row["source"] == "peace":
                 row["contrasts_reviewed"] = ["two_up_inverted"]
         self.mapping.write_text(json.dumps(review))
         with self.assertRaisesRegex(PreparationError, "variants not reviewed"):

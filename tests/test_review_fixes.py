@@ -141,8 +141,27 @@ class CacheIntegrityTests(unittest.TestCase):
 
 
 class V2DecodeTests(unittest.TestCase):
-    """P1: the v2 pre-flight claims to decode pixels, so it must."""
+    """P1: the v2 pre-flight claims to decode pixels, so it must.
 
+    Pillow is not installed in the contract CI job (it only needs stdlib), so the
+    execute-the-decoder test is skipped there while a static check still guards
+    that the decoder is wired into the pre-flight.
+    """
+
+    def test_preflight_wires_in_a_real_decoder(self):
+        src = (ROOT / "scripts/p1_v2_local.py").read_text(encoding="utf-8")
+        self.assertIn("def probe_decoadable", src)
+        self.assertIn("image.verify()", src)
+        self.assertIn("image.load()", src)
+        self.assertIn("decode_probe", src)
+        # The short-side expectation must actually be enforced, not just logged.
+        self.assertIn("min_side_observed", src)
+        self.assertIn("expected >=512", src)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("PIL") is not None,
+        "Pillow not installed in this environment (contract CI has no optional deps)",
+    )
     def test_real_jpegs_decode_and_corrupt_ones_fail(self):
         from PIL import Image
         from scripts import p1_v2_local

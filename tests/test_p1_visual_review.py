@@ -204,11 +204,14 @@ class VisualReviewPacketTests(unittest.TestCase):
         self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_NOT_P1_PASS")
         self.assertTrue(result["still_requires_ten_class_final_signoff"])
 
-    def test_peace_matching_official_two_is_reported_as_alias_conflict(self):
+    def test_quarantined_alias_matching_official_two_is_reported_as_alias_conflict(self):
+        # Owner visual review 2026-10-22 made `peace` the class-1 primary, so the
+        # conflict case is now a *quarantined* two-like shape being accepted:
+        # claiming `two_up` also matches the official "two" must stay unresolved.
         self.packet()
-        review = self.sign({"peace": "match"})
+        review = self.sign({"two_up": "match"})
         result = verify_review(self.output, review)
-        self.assertIn("peace", result["potential_command_alias_conflicts"])
+        self.assertIn("two_up", result["potential_command_alias_conflicts"])
         self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS")
         self.assertEqual(result["model_outputs_unchanged"], 10)
 
@@ -248,7 +251,9 @@ class VisualReviewPacketTests(unittest.TestCase):
             verify_review(self.output, path)
 
     def test_two_mapping_requires_its_contrast_samples(self):
-        self.packet(("two_up",), per_source=3)
+        # The class-1 primary is `peace`; reviewing only it, without its required
+        # two_up / peace_inverted / two_up_inverted comparisons, must fail.
+        self.packet(("peace",), per_source=3)
         path = self.sign()
         with self.assertRaisesRegex(VisualReviewError, "contrast missing"):
             verify_review(self.output, path)

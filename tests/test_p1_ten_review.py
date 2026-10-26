@@ -184,10 +184,12 @@ class PrivateReviewCampaignTests(unittest.TestCase):
         self.assertNotIn("SYNTHETIC_SUBJECT", private)
 
     def test_alias_conflict_appears_as_unresolved_and_never_approves(self):
+        # Owner visual review 2026-10-22 moved the class-1 primary to `peace`,
+        # so a quarantined two-like shape (`two_up`) is what can now conflict.
         for group in GROUPS:
-            self.make_group(group, alias_conflict="peace" if group == "two" else None)
+            self.make_group(group, alias_conflict="two_up" if group == "two" else None)
         res = draft(self.all, self.root / "candidate-draft")
-        self.assertIn("peace", res["lookalike_alias_questions"])
+        self.assertIn("two_up", res["lookalike_alias_questions"])
         self.assertEqual(res["status"], "REVIEW_CONFLICTS_REQUIRE_ADJUDICATION")
         signed = json.loads((self.root / "candidate-draft/hagrid-mapping-ack.UNSIGNED.json").read_text())
         self.assertTrue(all(x["approved"] is False for x in signed["classes"]))

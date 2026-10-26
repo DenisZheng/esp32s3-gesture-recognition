@@ -93,8 +93,11 @@ class LocalReviewWorkflowTests(unittest.TestCase):
             decision["comparative_notes"] = (
                 "Fake test comparison; no licensed images or real fingers inspected"
             )
-            decision["decision"] = "match" if source == "two_up" else "mismatch"
-            if source == "peace":
+            # Owner review 2026-10-22: `peace` is the class-1 primary, so it is
+            # the expected match; `alias` forces a conflicting verdict on a
+            # quarantined two-like shape to exercise the conflict path.
+            decision["decision"] = "match" if source == "peace" else "mismatch"
+            if source == "two_up":
                 decision["decision"] = alias
         review = self.root / "fake-signed-review.json"
         review.write_text(json.dumps(form))
@@ -138,11 +141,13 @@ class LocalReviewWorkflowTests(unittest.TestCase):
         self.assertTrue(result["ten_class_P1_signoff_still_required"])
         self.assertFalse(result["p1_pass"])
 
-    def test_peace_that_looks_like_command_is_reported_as_conflict(self):
+    def test_quarantined_two_like_alias_is_reported_as_conflict(self):
+        # Owner visual review 2026-10-22: `peace` is now the class-1 primary, so
+        # the alias-conflict case is a quarantined two-like shape being accepted.
         self.prepare()
         review = self.sign_fake_review(alias="match")
         result = verify(self.workspace, review)
-        self.assertIn("peace", result["potential_command_alias_conflicts"])
+        self.assertIn("two_up", result["potential_command_alias_conflicts"])
         self.assertEqual(result["status"], "HUMAN_REVIEW_RECORDED_WITH_UNRESOLVED_MAPPINGS")
         self.assertFalse(result["p1_pass"])
 

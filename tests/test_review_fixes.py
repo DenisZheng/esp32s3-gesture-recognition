@@ -1,219 +1,175 @@
 """Regression tests for the PR #16 review findings.
 
 Covers the P0 authorisation gate, the P1 manifest/path/image-integrity defects
-and the P2 per-class report bug. Synthetic data only; no HaGRID media.
+and the P2 per-class report bug.
+
+Stdlib ``unittest`` only: the contract CI job installs no third-party test
+runner, and adding one just for these checks would widen the supply-chain
+surface of the gate. Synthetic data only; no HaGRID media is read.
 """
+import importlib.util
 import json
 import sys
 import tempfile
+import unittest
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "scripts"))
-
-FAILS = []
 
 
-def ok(cond, label):
-    print(("PASS  " if cond else "FAIL  ") + label)
-    if not cond:
-        FAILS.append(label)
+def _load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-# ---------------------------------------------------------------- P0 prefetch
+class PrefetchAuthorisationTests(unittest.TestCase):
+    """P0-1: warming the cache must not bypass the licence gate."""
 
-def test_prefetch_requires_approvals(tmp=Path(".")):
-    """The cache warmer must refuse to touch annotations without both acks."""
-    import importlib.util
+    @classmethod
+    def setUpClass(cls):
+        cls.pf = _load_module("_pf_under_test", ROOT / "_prefetch_all.py")
 
-    spec = importlib.util.spec_from_file_location("pf", ROOT / "_prefetch_all.py")
-    pf = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(pf)
+    def test_missing_acks_abort_before_any_data_access(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "absent.json"
+            with self.assertRaises(SystemExit) as ctx:
+                self.pf.require_owner_approvals(missing, missing)
+            self.assertIn("licen", str(ctx.exception).lower())
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
-        missing = tmp / "nope.json"
-
-        # Missing licence ack -> SystemExit naming the licence.
-        try:
-            pf.require_owner_approvals(missing, missing)
-            ok(False, "missing acks should abort")
-        except SystemExit as exc:
-            ok("licence" in str(exc).lower() or "license" in str(exc).lower(),
-               f"missing ack aborts with licence message ({exc})")
-
-        # A structurally invalid mapping ack must also abort.
-        bad = tmp / "bad-mapping.json"
-        bad.write_text(json.dumps({"reviewer": "", "classes": []}), encoding="utf-8")
-        good_license = tmp / "lic.json"
-        good_license.write_text(json.dumps({
-            "reviewer": "synthetic",
-            "reviewed_on": "2026-10-26",
-            "license_pdf_sha256":
-                "14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22",
-            "permitted_scope": "research_only",
-            "accept_terms": True,
-        }), encoding="utf-8")
-        try:
-            pf.require_owner_approvals(good_license, bad)
-            ok(False, "invalid mapping ack should abort")
-        except SystemExit as exc:
-            ok("mapping" in str(exc).lower(), f"invalid mapping aborts ({exc})")
+    def test_invalid_mapping_ack_aborts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            lic = tmp / "lic.json"
+            lic.write_text(json.dumps({
+                "reviewer": "synthetic",
+                "reviewed_on": "2026-10-26",
+                "license_pdf_sha256":
+                    "14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22",
+                "permitted_scope": "research_only",
+                "accept_terms": True,
+            }), encoding="utf-8")
+            bad = tmp / "map.json"
+            bad.write_text(json.dumps({"reviewer": "", "classes": []}), encoding="utf-8")
+            with self.assertRaises(SystemExit) as ctx:
+                self.pf.require_owner_approvals(lic, bad)
+            self.assertIn("mapping", str(ctx.exception).lower())
 
 
-# ------------------------------------------------------------- P1 dataset yaml
+class DatasetManifestTests(unittest.TestCase):
+    """P1: dataset.yaml must be inside the integrity contract."""
 
-def test_dataset_yaml_hash_is_recorded_and_verified():
-    """Editing dataset.yaml after a build must invalidate the manifest check."""
-    from scripts.p1_dataset_builder import build_dataset  # noqa: F401
-    src = (ROOT / "scripts/p1_dataset_builder.py").read_text(encoding="utf-8")
-    ok("dataset_yaml_sha256" in src,
-       "builder records the dataset.yaml hash in the aggregate manifest")
-    ok("class_names_ordered" in src,
-       "builder records the ordered class list")
+    def test_builder_records_yaml_hash_and_class_order(self):
+        src = (ROOT / "scripts/p1_dataset_builder.py").read_text(encoding="utf-8")
+        self.assertIn("dataset_yaml_sha256", src)
+        self.assertIn("class_names_ordered", src)
 
+    def test_train_entry_verifies_yaml_and_manifest(self):
+        src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
+        self.assertIn("recorded_yaml_sha", src)
+        self.assertIn("dataset.yaml changed after the dataset was built", src)
+        self.assertIn("manifest.aggregate.json", src)
+        self.assertIn("require_training_clearance", src)
 
-def test_train_rejects_changed_yaml():
-    """p2_train must compare the on-disk YAML hash with the manifest."""
-    src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
-    ok("recorded_yaml_sha" in src, "train entry reads the recorded YAML hash")
-    ok("dataset.yaml changed after the dataset was built" in src,
-       "train entry fails when the YAML changed")
-    ok("manifest.aggregate.json" in src,
-       "train entry requires the aggregate manifest")
-    ok("require_training_clearance" in src,
-       "train entry gates on P1 acceptance")
+    def test_probe_experimental_train_strict(self):
+        src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
+        self.assertIn("require_training_clearance(dataset, experimental=True)", src)
+        self.assertIn("require_training_clearance(dataset, experimental=False)", src)
 
 
-def test_probe_is_experimental_but_train_is_not():
-    src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
-    ok("require_training_clearance(dataset, experimental=True)" in src,
-       "probe passes experimental=True")
-    ok("require_training_clearance(dataset, experimental=False)" in src,
-       "formal train passes experimental=False")
+class RunDirectoryTests(unittest.TestCase):
+    """P1: Ultralytics must not fork the run directory behind our back."""
+
+    def test_run_dir_reuse_and_save_dir_verification(self):
+        src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
+        self.assertIn("exist_ok=True", src)
+        self.assertIn("_verify_save_dir", src)
+        self.assertIn("trainer wrote to a different directory than requested", src)
 
 
-# ----------------------------------------------------------------- P1 run dir
+class OptimizerWhitelistTests(unittest.TestCase):
+    """P1: the optimiser that froze ESPDet weights must not be selectable."""
 
-def test_run_dir_is_not_silently_incremented():
-    src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
-    ok("exist_ok=True" in src,
-       "trainer is told to reuse the pre-created run dir")
-    ok("_verify_save_dir" in src,
-       "trainer save_dir is verified against the requested path")
-    ok("trainer wrote to a different directory than requested" in src,
-       "mismatched save_dir fails closed")
-
-
-# ---------------------------------------------------------------- P1 optimizer
-
-def test_optimizer_whitelist_excludes_auto():
-    src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
-    ok('ALLOWED_OPTIMIZERS = ("SGD"' in src, "optimiser whitelist defined")
-    ok('"auto"' not in src.split("ALLOWED_OPTIMIZERS")[1].split(")")[0],
-       "`auto` is not an allowed optimiser")
-    ok("choices=ALLOWED_OPTIMIZERS" in src, "CLI restricts to the whitelist")
+    def test_auto_is_not_allowed(self):
+        src = (ROOT / "scripts/p2_train.py").read_text(encoding="utf-8")
+        self.assertIn('ALLOWED_OPTIMIZERS = ("SGD"', src)
+        after = src.split("ALLOWED_OPTIMIZERS")[1].split(")")[0]
+        self.assertNotIn('"auto"', after)
+        self.assertIn("choices=ALLOWED_OPTIMIZERS", src)
 
 
-# ------------------------------------------------------------------ P1 p3 eval
+class OnnxExportTests(unittest.TestCase):
+    """P1: export and parity must not accept a half-verified graph."""
 
-def test_export_validates_shapes_and_staged_weights():
-    src = (ROOT / "scripts/p3_eval.py").read_text(encoding="utf-8")
-    ok("output_shapes" in src, "export records actual output shapes")
-    ok("shape {got} != " in src or "shape" in src and "EXPECTED_SHAPES" in src,
-       "export compares against EXPECTED_SHAPES")
-    ok("staged checkpoint" in src,
-       "export refuses a stale staged checkpoint")
-    ok("weights_sha256\": source_sha" in src,
-       "evidence records the source weights hash")
+    def test_export_validates_shapes_and_weights(self):
+        src = (ROOT / "scripts/p3_eval.py").read_text(encoding="utf-8")
+        self.assertIn("output_shapes", src)
+        self.assertIn("EXPECTED_SHAPES", src)
+        self.assertIn("staged checkpoint", src)
+        self.assertIn('"weights_sha256": source_sha', src)
 
-
-def test_parity_requires_all_six_outputs():
-    src = (ROOT / "scripts/p3_eval.py").read_text(encoding="utf-8")
-    ok("missing expected outputs" in src,
-       "parity fails when an expected output name is absent")
-    ok("shape_mismatch" in src, "parity compares shapes before flattening")
-    ok("ONNX exposes" in src, "parity checks the output count")
+    def test_parity_requires_every_output(self):
+        src = (ROOT / "scripts/p3_eval.py").read_text(encoding="utf-8")
+        self.assertIn("missing expected outputs", src)
+        self.assertIn("shape_mismatch", src)
+        self.assertIn("ONNX exposes", src)
 
 
-# --------------------------------------------------------- P1 cache integrity
+class CacheIntegrityTests(unittest.TestCase):
+    """P1: a truncated cache file must not count as downloaded."""
 
-def test_prefetch_checks_jpeg_structure():
-    import importlib.util
+    @classmethod
+    def setUpClass(cls):
+        cls.pf = _load_module("_pf_cache_test", ROOT / "_prefetch_all.py")
 
-    spec = importlib.util.spec_from_file_location("pf2", ROOT / "_prefetch_all.py")
-    pf = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(pf)
+    def test_jpeg_structure_probe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            good = tmp / "good.jpg"
+            good.write_bytes(b"\xff\xd8\xff" + b"x" * 100 + b"\xff\xd9")
+            truncated = tmp / "truncated.jpg"
+            truncated.write_bytes(b"\xff\xd8\xff" + b"x" * 100)
+            empty = tmp / "empty.jpg"
+            empty.write_bytes(b"")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
-        good = tmp / "good.jpg"
-        good.write_bytes(b"\xff\xd8\xff" + b"x" * 100 + b"\xff\xd9")
-        truncated = tmp / "truncated.jpg"
-        truncated.write_bytes(b"\xff\xd8\xff" + b"x" * 100)   # no EOI
-        empty = tmp / "empty.jpg"
-        empty.write_bytes(b"")
-
-        ok(pf._cache_entry_ok(good), "valid JPEG accepted by the cache probe")
-        ok(not pf._cache_entry_ok(truncated),
-           "truncated JPEG rejected (would be re-downloaded)")
-        ok(not pf._cache_entry_ok(empty), "empty file rejected")
-        ok(not pf._cache_entry_ok(tmp / "absent.jpg"), "missing file rejected")
+            self.assertTrue(self.pf._cache_entry_ok(good))
+            self.assertFalse(self.pf._cache_entry_ok(truncated))
+            self.assertFalse(self.pf._cache_entry_ok(empty))
+            self.assertFalse(self.pf._cache_entry_ok(tmp / "absent.jpg"))
 
 
-# ------------------------------------------------------------ P1 v2 decode probe
+class V2DecodeTests(unittest.TestCase):
+    """P1: the v2 pre-flight claims to decode pixels, so it must."""
 
-def test_v2_preflight_decodes_pixels():
-    from PIL import Image
-    from scripts import p1_v2_local
+    def test_real_jpegs_decode_and_corrupt_ones_fail(self):
+        from PIL import Image
+        from scripts import p1_v2_local
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        folder = Path(tmpdir)
-        for i, size in enumerate([(640, 480), (512, 512)]):
-            Image.new("RGB", size, (120, 130, 140)).save(folder / f"k{i}.jpg")
-        bad = folder / "bad.jpg"
-        bad.write_bytes(b"\xff\xd8\xff definitely not a jpeg \xff\xd9")
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            for i, size in enumerate([(640, 480), (512, 512)]):
+                Image.new("RGB", size, (120, 130, 140)).save(folder / f"k{i}.jpg")
+            (folder / "bad.jpg").write_bytes(b"\xff\xd8\xff not a jpeg \xff\xd9")
 
-        info = p1_v2_local.probe_decoadable(folder, ["k0", "k1"], limit=4)
-        ok(info["decoded"] == 2, f"both real JPEGs decoded ({info['decoded']})")
-        ok(info["min_side_min"] == 480, f"short side reported ({info['min_side_min']})")
+            info = p1_v2_local.probe_decoadable(folder, ["k0", "k1"], limit=4)
+            self.assertEqual(info["decoded"], 2)
+            self.assertEqual(info["min_side_min"], 480)
 
-        info2 = p1_v2_local.probe_decoadable(folder, ["bad"], limit=4)
-        ok(info2["decoded"] == 0, "corrupt JPEG not counted as decoded")
-        ok(len(info2["errors"]) == 1, "corrupt JPEG reported as an error")
+            bad = p1_v2_local.probe_decoadable(folder, ["bad"], limit=4)
+            self.assertEqual(bad["decoded"], 0)
+            self.assertEqual(len(bad["errors"]), 1)
 
 
-# ------------------------------------------------------------- P2 per-class AP
+class PerClassReportTests(unittest.TestCase):
+    """P2: the report read a key that was never stored, so it was always null."""
 
-def test_per_class_report_builds_from_stored_keys():
-    src = (ROOT / "scripts/p3_eval.py").read_text(encoding="utf-8")
-    ok('ap95 = per_class.get("ap50_95")' in src,
-       "per-class report reads the key that is actually stored")
-    ok('if "ap" in record.get("per_class", {})' not in src,
-       "the buggy `ap` membership test is gone")
+    def test_report_reads_stored_key(self):
+        src = (ROOT / "scripts/p3_eval.py").read_text(encoding="utf-8")
+        self.assertIn('ap95 = per_class.get("ap50_95")', src)
+        self.assertNotIn('if "ap" in record.get("per_class", {})', src)
 
 
 if __name__ == "__main__":
-    test_prefetch_requires_approvals()
-    test_dataset_yaml_hash_is_recorded_and_verified()
-    test_train_rejects_changed_yaml()
-    test_probe_is_experimental_but_train_is_not()
-    test_run_dir_is_not_silently_incremented()
-    test_optimizer_whitelist_excludes_auto()
-    test_export_validates_shapes_and_staged_weights()
-    test_parity_requires_all_six_outputs()
-    test_prefetch_checks_jpeg_structure()
-    test_v2_preflight_decodes_pixels()
-    test_per_class_report_builds_from_stored_keys()
-
-    print()
-    if FAILS:
-        print(f"{len(FAILS)} CHECK(S) FAILED")
-        for f in FAILS:
-            print("  -", f)
-        sys.exit(1)
-    print("ALL REVIEW-FIX CHECKS PASSED")
+    unittest.main(verbosity=2)

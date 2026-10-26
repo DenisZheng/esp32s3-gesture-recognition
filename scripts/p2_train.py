@@ -179,24 +179,32 @@ def check_dataset(data: Path) -> dict:
 def require_training_clearance(dataset: dict, *, experimental: bool) -> None:
     """Separate an experimental probe from the formal training gate.
 
-    The P1 acceptance chain ends with human visual/legal QA. Candidate datasets
-    are explicitly published with ``P1_pass: false``. A short bounded probe may
-    run on a candidate so the pipeline can be exercised, but a formal `train`
-    run must not — otherwise a dataset that nobody has reviewed becomes a
-    deliverable model.
+    Two independent conditions guard a formal run, because conflating them lets an
+    unreviewed dataset become a deliverable model:
+
+    * ``human_visual_decode_and_legal_qa_status`` — a human inspected sampled
+      images and boxes (recorded by ``p1_dataset_qa``);
+    * ``P1_pass`` — the dataset as a whole was accepted, which additionally
+      requires a settled legal position.
+
+    ``probe`` runs with ``experimental=True`` so the pipeline can be exercised on
+    a candidate; it never produces a deliverable claim.
     """
     if experimental:
         return
+    qa = dataset.get("dataset_human_qa_status")
+    if qa not in ("PASS", "APPROVED"):
+        raise TrainError(
+            "formal training requires completed human visual decode QA; the "
+            f"dataset reports {qa!r}. Run `python -m scripts.p1_dataset_qa` to "
+            "review and sign off the dataset, or use `probe` for a pipeline test."
+        )
     if dataset.get("dataset_p1_pass") is not True:
         raise TrainError(
-            "formal training requires a dataset whose P1 acceptance has passed; "
-            f"this manifest reports P1_pass={dataset.get('dataset_p1_pass')!r}. "
-            "Use `probe` for pipeline experiments, or complete the P1 human "
-            "visual/legal QA and rebuild the dataset."
-        )
-    if dataset.get("dataset_human_qa_status") not in ("PASS", "APPROVED"):
-        raise TrainError(
-            "formal training requires completed human visual decode and legal QA"
+            "formal training requires overall P1 acceptance; this manifest reports "
+            f"P1_pass={dataset.get('dataset_p1_pass')!r}. Human visual QA being "
+            "complete is necessary but not sufficient — the dataset must also be "
+            "formally accepted (including the legal position)."
         )
 
 

@@ -9,11 +9,16 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import os
+import random
 import re
+import socket
 import struct
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zlib
 from dataclasses import dataclass
@@ -54,21 +59,38 @@ def get_range(start: int, end: int) -> bytes:
     req = urllib.request.Request(URL, headers={
         "Range": f"bytes={start}-{end}", "Accept-Encoding": "identity"
     })
-    try:
-        with urllib.request.urlopen(req, timeout=45) as response:
-            if response.status != 206:
-                raise PreparationError("Server ignored Range; refusing full ZIP download")
-            match = RANGE_PATTERN.fullmatch(response.headers.get("Content-Range", ""))
-            if not match or tuple(map(int, match.groups())) != (start, end, ARCHIVE_BYTES):
-                raise PreparationError("Archive response does not match pinned size/range")
-            data = response.read(size + 1)
-    except PreparationError:
-        raise  # Surface explicit HTTP 200/invalid-range failure.
-    except (OSError, ValueError) as exc:
-        raise PreparationError("HTTP Range transfer failed") from exc
-    if len(data) != size:
-        raise PreparationError("Incomplete/excessive byte-range transfer")
-    return data
+    # The HaGRID object store drops long-lived connections
+    # (RemoteDisconnected / Connection reset by peer). Retry those transient
+    # faults with backoff; never retry an HTTP 200 (Range ignored, would fetch
+    # the whole archive) or a size/Content-Range mismatch.
+    attempts = 5
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=45) as response:
+                if response.status != 206:
+                    raise PreparationError(
+                        "Server ignored Range; refusing full ZIP download")
+                match = RANGE_PATTERN.fullmatch(response.headers.get("Content-Range", ""))
+                if (not match
+                        or tuple(map(int, match.groups())) != (start, end, ARCHIVE_BYTES)):
+                    raise PreparationError(
+                        "Archive response does not match pinned size/range")
+                data = response.read(size + 1)
+        except PreparationError:
+            raise  # Surface explicit HTTP 200/invalid-range failure.
+        except (OSError, ValueError) as exc:
+            transient = isinstance(
+                exc, (http.client.HTTPException, ConnectionError,
+                      TimeoutError, socket.timeout, urllib.error.URLError)
+            )
+            if not transient or attempt == attempts - 1:
+                raise PreparationError("HTTP Range transfer failed") from exc
+            time.sleep(min(30.0, 0.5 * (2 ** attempt)) * (1 + random.random() * 0.5))
+            continue
+        if len(data) != size:
+            raise PreparationError("Incomplete/excessive byte-range transfer")
+        return data
+    raise PreparationError("HTTP Range transfer retry limit reached")
 
 
 def parse_directory(tail: bytes, total_bytes: int) -> dict[str, Member]:

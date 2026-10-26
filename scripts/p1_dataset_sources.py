@@ -7,11 +7,16 @@ and both raw data and cache are PRIVATE (ignored data/, NEVER GitHub CI).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import hashlib
+import http.client
 import json
 import os
+import random
 import re
+import socket
 import stat
+import threading
 import time
 import urllib.error
 import zipfile
@@ -33,6 +38,35 @@ class SourceError(ValueError):
     """Refuse ambiguous, private, stale, oversized or corrupted source media."""
 
 
+class BudgetError(SourceError):
+    """Declared transfer/output byte budget was exhausted.
+
+    Separate subclass so concurrent prefetch can distinguish an authoritative
+    budget stop (must abort the build) from a recoverable per-image transport
+    failure (safe to skip and retry later).
+    """
+
+
+# Transport faults that mean "this connection died, try again" rather than
+# "the archive is wrong". A long range-download session against the HaGRID
+# object store does get connections closed mid-flight; treating that as a
+# permanent failure aborts hours of progress.
+_TRANSIENT_HTTP_STATUS = frozenset((408, 425, 429, 500, 502, 503, 504))
+
+
+def _is_transient(exc: BaseException | None) -> bool:
+    if exc is None:
+        return False
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in _TRANSIENT_HTTP_STATUS
+    if isinstance(exc, urllib.error.URLError):
+        return True
+    if isinstance(exc, (http.client.HTTPException, ConnectionError,
+                        TimeoutError, socket.timeout)):
+        return True
+    return False
+
+
 class ByteBudget:
     def __init__(self, total: int):
         if not isinstance(total, int) or total < 1:
@@ -42,8 +76,31 @@ class ByteBudget:
 
     def charge(self, amount: int):
         if amount < 0 or self.used + amount > self.total:
-            raise SourceError("Transfer/output byte budget exceeded; private cache retained")
+            raise BudgetError("Transfer/output byte budget exceeded; private cache retained")
         self.used += amount
+
+
+class _ThreadSafeBudget:
+    """Serialize budget accounting across prefetch workers.
+
+    Concurrent charging must stay atomic or the transfer cap could be exceeded.
+    """
+
+    def __init__(self, budget: ByteBudget):
+        self._budget = budget
+        self._lock = threading.Lock()
+
+    @property
+    def used(self) -> int:
+        return self._budget.used
+
+    @property
+    def total(self) -> int:
+        return self._budget.total
+
+    def charge(self, amount: int) -> None:
+        with self._lock:
+            self._budget.charge(amount)
 
 
 def _check_name(name: str):
@@ -271,32 +328,113 @@ class MeteredHTTPRange(imagezip.HTTPRange):
         super().__init__(url, size)
 
     def get(self, start: int, end: int) -> bytes:
-        # Transient 429/5xx/transport problems get two bounded retries. Each
-        # attempt consumes budget, and every retry re-verifies HTTP 206 +
-        # If-Match/Content-Range. Never retry HTTP 403/200 or corrupt bytes.
-        for attempt in range(3):
+        # Retry transient transport faults with exponential backoff. The HaGRID
+        # object store closes long-lived connections (RemoteDisconnected); that
+        # is a recoverable per-request fault, not corrupt archive bytes. Safety
+        # failures (HTTP 200 instead of 206, changed ETag/Content-Range, short
+        # payload) still fail immediately and are never retried.
+        attempts = 5
+        for attempt in range(attempts):
             self.budget.charge(end - start + 1)
             try:
                 return super().get(start, end)
             except imagezip.ImageRangeError as exc:
-                cause = exc.__cause__
-                transient = (
-                    isinstance(cause, urllib.error.HTTPError)
-                    and cause.code in (429, 500, 502, 503, 504)
-                ) or (
-                    isinstance(cause, urllib.error.URLError)
-                    and not isinstance(cause, urllib.error.HTTPError)
-                )
-                if not transient or attempt == 2:
+                if not _is_transient(exc.__cause__) or attempt == attempts - 1:
                     raise
-                time.sleep(0.5 * (2 ** attempt))
+                delay = min(30.0, 0.5 * (2 ** attempt)) * (1 + random.random() * 0.5)
+                time.sleep(delay)
         raise SourceError("Unreachable retry limit")
 
 
 class RemoteImages:
     def __init__(self, cache: Path, budget: ByteBudget):
         self.cache, self.budget = cache, budget
+        self.budget_meter = _ThreadSafeBudget(budget)
         self.index, self.transport = {}, {}
+
+    def prefetch(self, requests: list[tuple[str, str, str]], *, workers: int = 8) -> dict:
+        """Warm the private cache concurrently, then let get() re-verify.
+
+        Downloads only bytes not already cached. Every fetched JPEG still passes
+        the size/CRC/signature checks inside get(); a per-image transport failure
+        is recorded and skipped here because get() re-raises the real error when
+        that sample is actually needed. Only an exhausted byte budget aborts.
+
+        Transfer accounting: prefetch is the single place bytes actually come off
+        the wire, so it charges the shared budget exactly once per downloaded
+        range. get() then finds the CRC-checked cache file and charges nothing.
+        """
+        if not 3 <= workers <= 32:
+            raise SourceError("Prefetch workers must be 3..32")
+        pending = []
+        for source, stem, _split in ((s, st, sp) for sp, s, st in requests):
+            file = self.cache / "images" / source / (stem + ".jpg")
+            if file.exists() or file.is_symlink():
+                continue
+            pending.append((source, stem))
+        if not pending:
+            return {"prefetched": 0, "skipped_cached": len(requests)}
+        # Group by source because a transport (and its pinned index) is per class.
+        by_source: dict[str, list[str]] = {}
+        for source, stem in pending:
+            by_source.setdefault(source, []).append(stem)
+        done = failed = 0
+        for source, stems in by_source.items():
+            self._load(source)
+            index = self.index[source]
+            url = imagezip.IMAGE_URLS[source]
+            size = self.transport[source].size
+            local = threading.local()
+            print(
+                f"[prefetch] {source}: {len(stems)} stems, budget "
+                f"{self.budget_meter.used / (1024 ** 2):.0f}/"
+                f"{self.budget_meter.total / (1024 ** 2):.0f} MiB",
+                flush=True,
+            )
+
+            def transport_for_thread():
+                # HTTPRange keeps per-instance request state (ETag/If-Match) and
+                # is not thread-safe, so each worker owns its own transport.
+                net = getattr(local, "net", None)
+                if net is None:
+                    net = MeteredHTTPRange(url, size, self.budget_meter)
+                    local.net = net
+                return net
+
+            def fetch(stem: str) -> str:
+                """Return 'ok', 'failed' or 'missing'; never raise except budget."""
+                member = index.get(stem)
+                if member is None:
+                    return "missing"
+                try:
+                    data = imagezip.read_jpeg(member, transport_for_thread())
+                except BudgetError:
+                    raise
+                except (imagezip.ImageRangeError, SourceError, OSError) as exc:
+                    print(f"[prefetch] {source}/{stem[:8]}: {type(exc).__name__}",
+                          flush=True)
+                    return "failed"
+                data = _jpeg_checked(data)
+                try:
+                    _atomic_private_write(
+                        self.cache / "images" / source / (stem + ".jpg"), data
+                    )
+                except SourceError:
+                    # Another worker won the race; an existing cache file is fine.
+                    pass
+                return "ok"
+
+            with concurrent.futures.ThreadPoolExecutor(workers) as pool:
+                for status in pool.map(fetch, stems):
+                    if status == "ok":
+                        done += 1
+                    elif status == "failed":
+                        failed += 1
+            print(f"[prefetch] {source}: done={done} failed={failed}", flush=True)
+        return {"prefetched": done, "failed": failed,
+                "skipped_cached": len(requests) - len(pending),
+                "budget_used_mib": round(self.budget_meter.used / (1024 ** 2), 2),
+                "budget_total_mib": round(self.budget_meter.total / (1024 ** 2), 2)}
 
     def _load(self, source: str):
         if source in self.index:

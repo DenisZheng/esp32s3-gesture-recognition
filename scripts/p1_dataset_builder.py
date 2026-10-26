@@ -24,7 +24,7 @@ from scripts.hagrid_p1 import ROOT, PreparationError, _approval, _check_sample
 from scripts.hagrid_policy import policy_sha256
 from scripts.hagrid_image_zip64 import ImageRangeError
 from scripts.p1_dataset_sources import (
-    ByteBudget, SOURCES, SPLITS, SourceError, STEM, make_sources,
+    ByteBudget, RemoteImages, SOURCES, SPLITS, SourceError, STEM, make_sources,
 )
 
 SCHEMA = 1
@@ -160,7 +160,7 @@ def build_dataset(
     *, annotations: Path | None = None, images: Path | None = None,
     cache: Path | None = None, counts: dict[str, int] | None = None,
     seed: str = "espdet-p1-05-v1", max_transfer_gib: int = 12,
-    max_output_gib: int = 12,
+    max_output_gib: int = 12, prefetch_workers: int = 8,
 ):
     # Important: no user-submitted/official image or JSON reads before gate.
     if os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true":
@@ -179,6 +179,8 @@ def build_dataset(
     if (type(max_transfer_gib) is not int or not 1 <= max_transfer_gib <= 60
             or type(max_output_gib) is not int or not 1 <= max_output_gib <= 100):
         raise DatasetBuildError("Unsafe byte budget; choose explicit limits")
+    if type(prefetch_workers) is not int or not 3 <= prefetch_workers <= 32:
+        raise DatasetBuildError("Prefetch workers must be 3..32")
     dest = _private_target(output)
     if dest.exists():
         raise DatasetBuildError("Output dataset already exists; never overwrite")
@@ -210,17 +212,65 @@ def build_dataset(
             class_boxes = Counter()
             manifest = []
             output_bytes = 0
+            skipped_media = 0
+            duplicate_across_splits = 0
+            # Prefetch remote JPEGs concurrently. The upstream range reader is
+            # strictly serial: each image costs two round trips (local header
+            # then payload), which measured ~6 images/min on the owner host.
+            # Eight workers reach roughly 1.3 MB/s on the same pinned URLs while
+            # keeping every CRC/length/signature check in RemoteImages.get.
+            if mode == "auto" and isinstance(im, RemoteImages):
+                # Over-fetch per split, not globally: a single shared window sized
+                # by the train quota made val/test prefetch as many images as
+                # train (measured 5x wasted transfer on the 500/50/50 build).
+                margin = max(10, counts["train"] // 10)
+
+                def _want(split: str) -> int:
+                    return min(MAX_PER_SOURCE, counts[split] + margin)
+
+                im.prefetch(
+                    [(split, source, row[1])
+                     for split in SPLITS for source in SOURCES
+                     for row in candidates[(split, source)][:_want(split)]],
+                    workers=prefetch_workers,
+                )
             for split in SPLITS:
                 for source in SOURCES:
                     selected_count = 0
                     for _score, stem, _subject, rows in candidates[(split, source)]:
                         if selected_count >= counts[split]:
                             break
-                        image = im.get(source, stem)
+                        try:
+                            image = im.get(source, stem)
+                        except (SourceError, ImageRangeError) as exc:
+                            # A single sample that still fails after the transport's
+                            # own retries must not discard an hours-long build. Skip
+                            # it, keep the failure visible, and let the per-source
+                            # quota check below still fail closed if too few landed.
+                            skipped_media += 1
+                            print(
+                                f"[build] skip {split}/{source}/{stem[:8]}: "
+                                f"{type(exc).__name__}",
+                                flush=True,
+                            )
+                            continue
                         sha = hashlib.sha256(image).hexdigest()
                         if sha in seen_hashes:
                             if seen_hashes[sha] != split:
-                                raise DatasetBuildError("Duplicate image bytes span held-out splits")
+                                # The same bytes already landed in another split.
+                                # Publishing them again would leak a held-out
+                                # sample into training, so drop this candidate
+                                # and let the quota loop take the next one; the
+                                # per-source quota check still fails closed if
+                                # too few distinct images remain.
+                                duplicate_across_splits += 1
+                                print(
+                                    f"[build] drop duplicate bytes "
+                                    f"{split}/{source}/{stem[:8]} "
+                                    f"(already in {seen_hashes[sha]})",
+                                    flush=True,
+                                )
+                                continue
                             # Same-frame multi-gesture duplicate: drop within split
                             # rather than poison source class balancing.
                             continue
@@ -270,6 +320,8 @@ def build_dataset(
                 "invalid_records_by_split": provenance["invalid_annotation_records_by_split"],
                 "discarded_cross_label_records_not_silently_ignored": True,
                 "seen_image_sha256_count": len(seen_hashes),
+                "dropped_cross_split_duplicate_bytes": duplicate_across_splits,
+                "skipped_unreadable_media": skipped_media,
                 "no_hand_negative_images_auto_created": 0,
                 "human_visual_decode_and_legal_qa_status": "PENDING",
                 "P1_pass": False,
@@ -396,6 +448,8 @@ def main() -> None:
     b.add_argument("--seed", default="espdet-p1-05-v1")
     b.add_argument("--max-transfer-gib", type=int, default=12)
     b.add_argument("--max-output-gib", type=int, default=12)
+    b.add_argument("--prefetch-workers", type=int, default=16,
+                   help="Concurrent range prefetch workers for auto mode (3..32)")
     v = sub.add_parser("verify", help="verify private image/label SHA256s")
     v.add_argument("--output", type=Path, required=True)
     args = p.parse_args()
@@ -413,6 +467,7 @@ def main() -> None:
                 annotations=args.annotations, images=args.images, cache=args.cache,
                 counts=counts, seed=args.seed, max_transfer_gib=args.max_transfer_gib,
                 max_output_gib=args.max_output_gib,
+                prefetch_workers=args.prefetch_workers,
             )
     except DatasetBuildError as exc:
         p.exit(2, f"FAIL CLOSED: {exc}\n")

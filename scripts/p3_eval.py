@@ -188,20 +188,22 @@ def run_eval(args) -> int:
         record["per_class"]["names"] = [
             CLASS_NAMES[int(i)] if 0 <= int(i) < len(CLASS_NAMES) else str(i) for i in idx
         ]
-    if "ap" in record.get("per_class", {}):
+    # Build the per-class report from the keys actually stored above. An earlier
+    # version stored `ap50_95` but then tested for `ap`, so the report was always
+    # null even though the arrays were present (confirmed on the RTX 4080 run).
+    per_class = record.get("per_class", {})
+    ap95 = per_class.get("ap50_95")
+    if isinstance(ap95, list) and ap95:
+        names_list = per_class.get("names") or [str(i) for i in range(len(ap95))]
         record["per_class_report"] = [
             {
-                "class": record["per_class"]["names"][i]
-                if "names" in record["per_class"] else str(i),
-                "ap50_95": record["per_class"]["ap"][i],
-                "ap50": record["per_class"]["ap50"][i]
-                if "ap50" in record["per_class"] else None,
-                "precision": record["per_class"]["precision"][i]
-                if "precision" in record["per_class"] else None,
-                "recall": record["per_class"]["recall"][i]
-                if "recall" in record["per_class"] else None,
+                "class": names_list[i] if i < len(names_list) else str(i),
+                "ap50_95": ap95[i],
+                "ap50": (per_class.get("ap50") or [None] * len(ap95))[i],
+                "precision": (per_class.get("precision") or [None] * len(ap95))[i],
+                "recall": (per_class.get("recall") or [None] * len(ap95))[i],
             }
-            for i in range(len(record["per_class"]["ap"]))
+            for i in range(len(ap95))
         ]
 
     # Confusion matrix: Ultralytics exposes it on the metrics object when
@@ -241,8 +243,23 @@ def run_export(args) -> int:
     out = args.run_dir
     out.mkdir(parents=True, exist_ok=True)
     staged = out / "best.pt"
-    if not staged.exists():
+    source_sha = sha256_file(weights)
+    # Never reuse a stale staged checkpoint: an earlier export may have copied a
+    # different best.pt, and the evidence would then record this run's weights
+    # hash against a graph built from the old file.
+    if staged.exists():
+        staged_sha = sha256_file(staged)
+        if staged_sha != source_sha:
+            raise EvalError(
+                f"staged checkpoint {staged} is not the requested weights "
+                f"(sha256 {staged_sha[:12]} != {source_sha[:12]}); use a fresh "
+                "--run-dir or remove the stale copy"
+            )
+    else:
         staged.write_bytes(weights.read_bytes())
+        staged_sha = sha256_file(staged)
+        if staged_sha != source_sha:
+            raise EvalError("staged checkpoint copy did not match the source weights")
 
     if str(UPSTREAM) not in sys.path:
         sys.path.insert(0, str(UPSTREAM))
@@ -279,7 +296,7 @@ def run_export(args) -> int:
         "onnx_sha256": sha256_file(onnx_path),
         "onnx_bytes": onnx_path.stat().st_size,
         "weights": str(weights),
-        "weights_sha256": sha256_file(weights),
+        "weights_sha256": source_sha,
         "upstream_esp_detection_sha": _pinned_upstream(),
         "versions": _versions(),
         "opset_imports": [{"domain": o.domain, "version": o.version}
@@ -296,6 +313,21 @@ def run_export(args) -> int:
         problems.append(f"outputs {outputs} != {list(OUTPUT_NAMES)}")
     if not any(o.version == 13 for o in graph.opset_import if o.domain in ("", "ai.onnx")):
         problems.append("default-domain opset is not 13")
+
+    # P3-01 also requires the declared per-stage shapes. Name-only validation
+    # would pass a graph whose class channel count silently changed.
+    shapes_actual = {}
+    for output in graph.graph.output:
+        dims = [d.dim_value or d.dim_param for d in output.type.tensor_type.shape.dim]
+        shapes_actual[output.name] = dims
+    for name, expected in EXPECTED_SHAPES:
+        got = shapes_actual.get(name)
+        if got is None:
+            problems.append(f"missing output tensor {name}")
+            continue
+        if tuple(got) != tuple(expected):
+            problems.append(f"{name} shape {got} != {list(expected)}")
+    record["output_shapes"] = shapes_actual
     record["problems"] = problems
     record["six_named_outputs"] = not problems
 
@@ -364,30 +396,46 @@ def run_parity(args) -> int:
     onnx_out = sess.run(None, feed)
 
     names = [o.name for o in sess.get_outputs()]
-    order = [names.index(n) for n in OUTPUT_NAMES if n in names] or list(range(len(onnx_out)))
-    onnx_list = [onnx_out[i] for i in order]
+    # Require every expected output by name. An earlier version silently skipped
+    # names that were absent and then zipped, so a missing tensor truncated the
+    # comparison instead of failing it.
+    missing = [n for n in OUTPUT_NAMES if n not in names]
+    if missing:
+        raise EvalError(f"ONNX is missing expected outputs: {missing}")
+    if len(names) != len(OUTPUT_NAMES):
+        raise EvalError(
+            f"ONNX exposes {len(names)} outputs, expected {len(OUTPUT_NAMES)}"
+        )
+    onnx_list = [onnx_out[names.index(n)] for n in OUTPUT_NAMES]
 
     comparisons = []
     ok = True
     for name, ref, got in zip(OUTPUT_NAMES, torch_list, onnx_list):
-        ref = np.asarray(ref, dtype=np.float64).ravel()
-        got = np.asarray(got, dtype=np.float64).ravel()
-        if ref.shape != got.shape:
-            comparisons.append({"output": name, "shape_mismatch":
-                                [list(ref.shape), list(got.shape)]})
+        ref_arr = np.asarray(ref, dtype=np.float64)
+        got_arr = np.asarray(got, dtype=np.float64)
+        # Compare shapes before flattening: flattening alone would hide a
+        # transposed or reshaped tensor that happens to have the same count.
+        if ref_arr.shape != got_arr.shape:
+            comparisons.append({
+                "output": name,
+                "shape_mismatch": [list(ref_arr.shape), list(got_arr.shape)],
+            })
             ok = False
             continue
-        abs_err = np.abs(ref - got)
-        denom = np.maximum(np.abs(ref), 1e-8)
+        ref_f = ref_arr.ravel()
+        got_f = got_arr.ravel()
+        abs_err = np.abs(ref_f - got_f)
+        denom = np.maximum(np.abs(ref_f), 1e-8)
         comparisons.append({
             "output": name,
-            "elements": int(ref.size),
+            "shape": list(ref_arr.shape),
+            "elements": int(ref_f.size),
             "max_abs_err": float(abs_err.max()),
             "mean_abs_err": float(abs_err.mean()),
             "max_rel_err": float((abs_err / denom).max()),
-            "allclose_atol_1e-4": bool(np.allclose(ref, got, atol=1e-4, rtol=1e-3)),
+            "allclose_atol_1e-4": bool(np.allclose(ref_f, got_f, atol=1e-4, rtol=1e-3)),
         })
-        if not np.allclose(ref, got, atol=1e-4, rtol=1e-3):
+        if not np.allclose(ref_f, got_f, atol=1e-4, rtol=1e-3):
             ok = False
 
     record = {

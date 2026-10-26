@@ -347,6 +347,15 @@ def build_dataset(
             dataset_yaml += "train: images/train\nval: images/val\ntest: images/test\n"
             dataset_yaml += "nc: 10\nnames:\n"
             dataset_yaml += "".join(f"  {i}: {name}\n" for i, name in enumerate(CLASS_NAMES))
+            # The YAML is part of the dataset contract, not just a pointer: it
+            # fixes class order and split paths. Record its hash in the manifest
+            # so a later edit cannot keep the image/label hashes valid while
+            # silently changing what the model is trained on.
+            dataset_yaml_sha256 = hashlib.sha256(
+                dataset_yaml.encode("utf-8")
+            ).hexdigest()
+            aggregate["dataset_yaml_sha256"] = dataset_yaml_sha256
+            aggregate["class_names_ordered"] = list(CLASS_NAMES)
             (stage / "dataset.yaml").write_text(dataset_yaml, encoding="utf-8")
             if dest.exists():
                 raise DatasetBuildError("Output directory appeared during build")

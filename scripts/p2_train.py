@@ -40,6 +40,12 @@ UPSTREAM = ROOT / "external" / "esp-detection"
 LOCK = ROOT / "upstreams.lock.json"
 
 
+# Optimisers verified to register every ESPDet custom module. `auto` is
+# deliberately absent: it built MuSGD groups containing "0 weight" entries, so
+# the convolutions never updated and best.pt stayed byte-identical to epoch 1.
+ALLOWED_OPTIMIZERS = ("SGD", "Adam", "AdamW", "NAdam", "RAdam", "RMSProp")
+
+
 class TrainError(ValueError):
     """Refuse to start training outside the approved P2 contract."""
 
@@ -109,7 +115,7 @@ def check_dataset(data: Path) -> dict:
     if not root.is_absolute():
         root = (base / root).resolve()
     counts = {}
-    for split in ("train", "val"):
+    for split in ("train", "val", "test"):
         folder = root / "images" / split
         if not folder.is_dir():
             raise TrainError(f"dataset split images/{split} missing")
@@ -117,11 +123,81 @@ def check_dataset(data: Path) -> dict:
         if n == 0:
             raise TrainError(f"dataset split images/{split} is empty")
         counts[split] = n
+
+    # Bind the manifest to the YAML that will actually be consumed. Without
+    # this, editing classes, split paths or the data root leaves every image
+    # and label hash intact, so a checksum-verified dataset can silently point
+    # at a different class ordering or a different split.
+    manifest_path = root / "manifest.aggregate.json"
+    if not manifest_path.is_file():
+        raise TrainError(
+            "dataset is missing manifest.aggregate.json; refusing to train on an "
+            "unverified directory"
+        )
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise TrainError("dataset manifest is unreadable") from exc
+
+    yaml_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    recorded_yaml_sha = manifest.get("dataset_yaml_sha256")
+    if recorded_yaml_sha is None:
+        raise TrainError(
+            "manifest does not record a dataset.yaml hash; rebuild the dataset "
+            "with the current builder"
+        )
+    if recorded_yaml_sha != yaml_sha:
+        raise TrainError(
+            "dataset.yaml changed after the dataset was built; the manifest no "
+            "longer describes this configuration"
+        )
+    if manifest.get("model_classes") != 10:
+        raise TrainError("manifest does not describe a ten-class dataset")
+    recorded_split = manifest.get("by_split") or {}
+    for split, n in counts.items():
+        if recorded_split.get(split) != n:
+            raise TrainError(
+                f"manifest records {recorded_split.get(split)} {split} images but "
+                f"{n} are present"
+            )
+
     return {
-        "dataset_yaml_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "dataset_yaml_sha256": yaml_sha,
+        "dataset_manifest_sha256": hashlib.sha256(
+            manifest_path.read_bytes()
+        ).hexdigest(),
         "dataset_root": str(root),
         "images_per_split": counts,
+        "dataset_p1_status": manifest.get("status"),
+        "dataset_human_qa_status": manifest.get(
+            "human_visual_decode_and_legal_qa_status"
+        ),
+        "dataset_p1_pass": manifest.get("P1_pass"),
     }
+
+
+def require_training_clearance(dataset: dict, *, experimental: bool) -> None:
+    """Separate an experimental probe from the formal training gate.
+
+    The P1 acceptance chain ends with human visual/legal QA. Candidate datasets
+    are explicitly published with ``P1_pass: false``. A short bounded probe may
+    run on a candidate so the pipeline can be exercised, but a formal `train`
+    run must not — otherwise a dataset that nobody has reviewed becomes a
+    deliverable model.
+    """
+    if experimental:
+        return
+    if dataset.get("dataset_p1_pass") is not True:
+        raise TrainError(
+            "formal training requires a dataset whose P1 acceptance has passed; "
+            f"this manifest reports P1_pass={dataset.get('dataset_p1_pass')!r}. "
+            "Use `probe` for pipeline experiments, or complete the P1 human "
+            "visual/legal QA and rebuild the dataset."
+        )
+    if dataset.get("dataset_human_qa_status") not in ("PASS", "APPROVED"):
+        raise TrainError(
+            "formal training requires completed human visual decode and legal QA"
+        )
 
 
 def environment_snapshot() -> dict:
@@ -207,7 +283,7 @@ def _common_kwargs(args) -> dict:
         amp=args.amp,
         project=str(args.run_dir.parent),
         name=args.run_dir.name,
-        exist_ok=False,
+        exist_ok=True,
         plots=False,
         val=True,
         verbose=True,
@@ -233,6 +309,37 @@ def _common_kwargs(args) -> dict:
         weight_decay=0.0005,
         cos_lr=False,
     )
+
+
+def _prepare_run_dir(run_dir: Path) -> None:
+    """Create the run directory and refuse to continue if it already exists.
+
+    Ultralytics treats `exist_ok=False` by *incrementing* the name (run2, run3,
+    ...) rather than failing. Creating the directory here and passing that exact
+    name means the trainer must reuse it, so a previous run can never be
+    silently forked into a sibling directory that the evidence JSON would not
+    describe. Observed on the owner host: `runs/p2-scratch-6000` requested while
+    the weights landed in `runs/p2-scratch-60002`.
+    """
+    if run_dir.exists():
+        raise TrainError(
+            f"run directory already exists: {run_dir}; choose a new run id "
+            "instead of reusing a previous run"
+        )
+    run_dir.mkdir(parents=True)
+
+
+def _verify_save_dir(reported: str | None, expected: Path) -> None:
+    """Fail if Ultralytics wrote somewhere other than the requested run dir."""
+    if reported is None:
+        raise TrainError("trainer did not report a save directory")
+    got = Path(reported).resolve()
+    want = expected.resolve()
+    if got != want:
+        raise TrainError(
+            "trainer wrote to a different directory than requested "
+            f"({got} != {want}); checkpoints and evidence would disagree"
+        )
 
 
 def _finalise(run_dir: Path, record: dict) -> dict:
@@ -262,16 +369,21 @@ def _finalise(run_dir: Path, record: dict) -> dict:
 
 
 def run_probe(args) -> dict:
-    """One short, explicitly bounded real-loss run (P2-01 gate)."""
+    """One short, explicitly bounded real-loss run (P2-01 gate).
+
+    A probe is explicitly experimental: it exists to prove the pipeline moves
+    real gradients on real labels. It may run against a candidate dataset whose
+    human QA is still pending, which is why the clearance check below is passed
+    ``experimental=True``. A formal `train` run may not.
+    """
     upstream_sha = check_upstream()
     dataset = check_dataset(args.data)
+    require_training_clearance(dataset, experimental=True)
     scratch_yaml = args.model_yaml
     model = load_model(yaml_path=scratch_yaml)
     nc = assert_scratch(model)
 
-    if args.run_dir.exists():
-        raise TrainError("Refusing to reuse an existing probe directory")
-    args.run_dir.mkdir(parents=True)
+    _prepare_run_dir(args.run_dir)
     record = {
         "schema_version": 1,
         "kind": "p2_01_real_batch_probe",
@@ -299,7 +411,9 @@ def run_probe(args) -> dict:
     record["status"] = "COMPLETED"
     record["duration_s"] = round(time.time() - started, 2)
     record["epochs_requested"] = 1
-    record["save_dir"] = str(getattr(result, "save_dir", args.run_dir))
+    actual_save_dir = str(getattr(result, "save_dir", args.run_dir))
+    _verify_save_dir(actual_save_dir, args.run_dir)
+    record["save_dir"] = actual_save_dir
     try:
         import torch
 
@@ -326,12 +440,12 @@ def run_train(args) -> dict:
         )
     upstream_sha = check_upstream()
     dataset = check_dataset(args.data)
+    # Formal training needs signed-off data, not merely ten class folders.
+    require_training_clearance(dataset, experimental=False)
     model = load_model(yaml_path=args.model_yaml)
     nc = assert_scratch(model)
 
-    if args.run_dir.exists():
-        raise TrainError("Refusing to reuse an existing run directory")
-    args.run_dir.mkdir(parents=True)
+    _prepare_run_dir(args.run_dir)
     record = {
         "schema_version": 1,
         "kind": "p2_scratch_training",
@@ -372,7 +486,9 @@ def run_train(args) -> dict:
     record["status"] = "COMPLETED"
     record["duration_s"] = round(time.time() - started, 2)
     record["epochs_completed"] = args.epochs
-    record["save_dir"] = str(getattr(result, "save_dir", args.run_dir))
+    actual_save_dir = str(getattr(result, "save_dir", args.run_dir))
+    _verify_save_dir(actual_save_dir, args.run_dir)
+    record["save_dir"] = actual_save_dir
     try:
         import torch
 
@@ -460,6 +576,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--mosaic", type=float, default=1.0)
         p.add_argument("--close-mosaic", type=int, default=0)
         p.add_argument("--optimizer", default="SGD",
+                       choices=ALLOWED_OPTIMIZERS,
                        help="Explicit optimiser; 'auto' freezes ESPDet custom weights")
         p.add_argument("--lr0", type=float, default=0.01)
         p.add_argument("--lrf", type=float, default=0.01)

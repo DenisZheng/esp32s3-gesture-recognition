@@ -107,6 +107,43 @@ def resolve_annotations(root: Path) -> tuple[Path, tuple[str, ...]]:
     raise V2Error("no train/val/test annotation folders found")
 
 
+def probe_decoadable(folder: Path, keys: list[str], limit: int = 8) -> dict:
+    """Actually decode a few JPEGs instead of trusting the file extension.
+
+    The pre-flight used to advertise pixel-size checking while only looking at
+    names and byte sizes. Structural checks cannot catch a truncated download or
+    a mislabelled non-JPEG, and both would surface only during training.
+    """
+    from PIL import Image
+
+    result = {"checked": 0, "decoded": 0, "sizes": [], "errors": []}
+    for key in keys[:limit]:
+        path = folder / f"{key}.jpg"
+        if not path.is_file():
+            continue
+        result["checked"] += 1
+        try:
+            with Image.open(path) as image:
+                image.verify()          # detects truncation/corruption
+            with Image.open(path) as image:
+                width, height = image.size
+                image.load()
+            if width <= 0 or height <= 0:
+                result["errors"].append(f"{key}: non-positive dimensions")
+                continue
+            result["decoded"] += 1
+            result["sizes"].append([width, height])
+        except Exception as exc:  # noqa: BLE001 - PIL raises several types
+            result["errors"].append(f"{key}: {type(exc).__name__}")
+    if result["sizes"]:
+        widths = sorted(s[0] for s in result["sizes"])
+        heights = sorted(s[1] for s in result["sizes"])
+        result["min_side_min"] = min(min(w, h) for w, h in result["sizes"])
+        result["width_range"] = [widths[0], widths[-1]]
+        result["height_range"] = [heights[0], heights[-1]]
+    return result
+
+
 def check(images: Path, annotations: Path, *, sample: int = 20) -> dict:
     """Pre-flight: structure, counts and key-to-file resolution."""
     img_base, img_layout = resolve_images(images)
@@ -171,6 +208,41 @@ def check(images: Path, annotations: Path, *, sample: int = 20) -> dict:
                 f"({found}/{len(picked)})"
             )
     report["key_resolution"] = resolved
+
+    # Decode real pixels for a couple of classes; a name-only check would pass a
+    # corrupted tree. Sampling keeps this fast on a 10 000-image source while
+    # still exercising every class.
+    decode = {}
+    for source in SOURCES:
+        folder = img_base / source
+        doc = ann_base / "train" / f"{source}.json"
+        if not folder.is_dir() or not doc.is_file():
+            continue
+        try:
+            keys = list(json.loads(doc.read_text(encoding="utf-8")).keys())
+        except (OSError, ValueError):
+            continue
+        info = probe_decoadable(folder, keys)
+        decode[source] = info
+        if info["checked"] and info["decoded"] == 0:
+            report["problems"].append(
+                f"no sampled JPEG decoded for {source} ({len(info['errors'])} errors)"
+            )
+        elif info["errors"]:
+            report["problems"].append(
+                f"{len(info['errors'])} sampled JPEG(s) failed to decode for {source}"
+            )
+    report["decode_probe"] = decode
+    sides = [v.get("min_side_min") for v in decode.values() if v.get("min_side_min")]
+    if sides:
+        report["min_side_observed"] = min(sides)
+        # The v2 512px bundle should have a short side of at least ~512 px. A
+        # much smaller value means the wrong archive was copied.
+        if min(sides) < 480:
+            report["problems"].append(
+                f"smallest short side is {min(sides)}px, expected >=512 for the "
+                "v2 512px bundle"
+            )
     report["status"] = "CHECK_OK" if not report["problems"] else "CHECK_FAILED"
     return report
 

@@ -29,6 +29,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -40,6 +41,7 @@ from scripts.p1_dataset_builder import (  # noqa: E402
     _gather_candidates,
     MAX_PER_SOURCE,
 )
+from scripts.hagrid_p1 import PreparationError, _approval  # noqa: E402
 from scripts.p1_dataset_sources import (  # noqa: E402
     ByteBudget,
     RemoteAnnotations,
@@ -50,6 +52,32 @@ from scripts.p1_dataset_sources import (  # noqa: E402
 )
 
 SEED = "espdet-p1-05-v1"
+DEFAULT_LICENSE_ACK = Path("data/reviews/hagrid-license-ack.json")
+DEFAULT_MAPPING_ACK = Path("data/reviews/hagrid-mapping-ack.json")
+
+
+def require_owner_approvals(license_ack: Path, mapping_ack: Path) -> None:
+    """Fail closed unless the owner's research licence and ten-class mapping
+    acknowledgements are present and valid.
+
+    This warmer reads HaGRID annotations and downloads person-bearing JPEGs.
+    ``p1_dataset_builder`` gates that behind these two private files; warming the
+    cache must not become a side channel that skips the same gate. Reviewer
+    identity is never printed.
+    """
+    try:
+        _approval(license_ack, "license")
+    except PreparationError as exc:
+        raise SystemExit(
+            f"BLOCKED: research licence acknowledgement missing or invalid: {exc}"
+        )
+    try:
+        _approval(mapping_ack, "mapping")
+    except PreparationError as exc:
+        raise SystemExit(
+            f"BLOCKED: ten-class visual mapping acknowledgement missing or "
+            f"invalid: {exc}"
+        )
 
 
 def cache_counts(cache: Path) -> dict[str, int]:
@@ -92,12 +120,39 @@ def build_request_list(cache: Path, counts: dict[str, int]) -> list[tuple[str, s
 
 
 def pending_by_source(requests, cache: Path) -> dict[str, list[tuple[str, str, str]]]:
+    """Return samples still missing *or corrupt*, so damaged cache entries are
+    re-downloaded instead of being counted as complete.
+
+    A plain ``file.exists()`` check treats a truncated or corrupted JPEG as done.
+    The failure then surfaces hours later during dataset assembly, or worse, a
+    subtly damaged image reaches training. Validate structure here: JPEG magic,
+    EOI marker, and a non-trivial length.
+    """
     grouped: dict[str, list[tuple[str, str, str]]] = {}
     for split, source, stem in requests:
-        if (cache / "images" / source / (stem + ".jpg")).exists():
+        path = cache / "images" / source / (stem + ".jpg")
+        if _cache_entry_ok(path):
             continue
         grouped.setdefault(source, []).append((split, source, stem))
     return grouped
+
+
+def _cache_entry_ok(path: Path) -> bool:
+    """Cheap integrity probe for one cached JPEG."""
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return False
+    if size < 4:
+        return False
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(3)
+            handle.seek(-2, os.SEEK_END)
+            tail = handle.read(2)
+    except OSError:
+        return False
+    return head == b"\xff\xd8\xff" and tail == b"\xff\xd9"
 
 
 def main() -> int:
@@ -107,6 +162,10 @@ def main() -> int:
     ap.add_argument("--test", type=int, default=50)
     ap.add_argument("--cache", type=Path, default=Path("data/cache/hagrid10-p1-05"))
     ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--license-ack", type=Path, default=DEFAULT_LICENSE_ACK,
+                    help="owner research-licence acknowledgement (required)")
+    ap.add_argument("--mapping-ack", type=Path, default=DEFAULT_MAPPING_ACK,
+                    help="ten-class visual mapping acknowledgement (required)")
     ap.add_argument("--rounds", type=int, default=0,
                     help="download passes; 0 keeps retrying until complete")
     ap.add_argument("--sleep", type=int, default=60,
@@ -127,6 +186,9 @@ def main() -> int:
         cache.resolve().relative_to((ROOT / "data").resolve())
     except ValueError:
         return fail("cache must live under the repository data/ directory")
+
+    # Authorisation gate BEFORE any annotation or JPEG access.
+    require_owner_approvals(args.license_ack, args.mapping_ack)
 
     before = cache_counts(cache)
     log("cached before: " + " ".join(f"{k}={v}" for k, v in before.items()))
@@ -166,7 +228,8 @@ def main() -> int:
             log(f"=== pass {rnd} ===")
             for source in order:
                 todo = [r for r in grouped.get(source, [])
-                        if not (cache / "images" / source / (r[2] + ".jpg")).exists()]
+                        if not _cache_entry_ok(
+                            cache / "images" / source / (r[2] + ".jpg"))]
                 if not todo:
                     continue
                 t0 = time.time()
@@ -178,7 +241,7 @@ def main() -> int:
                 elapsed = max(1e-6, time.time() - t0)
                 left = sum(
                     1 for r in todo
-                    if not (cache / "images" / source / (r[2] + ".jpg")).exists()
+                    if not _cache_entry_ok(cache / "images" / source / (r[2] + ".jpg"))
                 )
                 done = len(todo) - left
                 rate = done / elapsed * 60

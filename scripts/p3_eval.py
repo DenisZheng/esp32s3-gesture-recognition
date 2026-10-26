@@ -335,25 +335,29 @@ def run_parity(args) -> int:
         if isinstance(module, ESPDetect):
             module.forward = ESPDetect.export_onnx_forward.__get__(module)
 
+    # The deployment ONNX is exported with a fixed batch of 1 (dynamic=False is
+    # required for ESP-PPQ). Use a batch-1 input for the parity comparison; a
+    # larger batch would be rejected by the graph rather than revealing a
+    # numerical difference.
     torch.manual_seed(args.seed)
-    x = torch.rand(args.seed % 1000 + 1, 3, args.imgsz, args.imgsz, dtype=torch.float32)
+    x = torch.rand(1, 3, args.imgsz, args.imgsz, dtype=torch.float32)
     with torch.no_grad():
         torch_out = net(x)
     if isinstance(torch_out, dict):
         torch_out = torch_out.get("feats", torch_out)
     if not isinstance(torch_out, (list, tuple)):
         raise EvalError("unexpected PyTorch output structure for parity check")
+
+    # The ESPDetect head was switched to `export_onnx_forward` above, so the
+    # network already returns the six deployment tensors in output order.
+    # Feeding them through cv2/cv3 again - as an earlier version did - applies
+    # the head twice and produces a large, stage-dependent mismatch.
     torch_list = [t.detach().cpu().numpy() for t in torch_out]
-    # Upstream export returns six tensors; re-assemble from the per-stage pairs
-    # when only three raw feature maps are available.
-    if len(torch_list) == 3:
-        pairs = []
-        last = net.model[-1]
-        for i, feat in enumerate(torch_out):
-            with torch.no_grad():
-                pairs.append(last.cv2[i](feat).cpu().numpy())
-                pairs.append(last.cv3[i](feat).cpu().numpy())
-        torch_list = [pairs[0], pairs[1], pairs[2], pairs[3], pairs[4], pairs[5]]
+    if len(torch_list) != len(OUTPUT_NAMES):
+        raise EvalError(
+            f"expected {len(OUTPUT_NAMES)} tensors from export forward, "
+            f"got {len(torch_list)}"
+        )
 
     sess = ort.InferenceSession(str(args.onnx), providers=["CPUExecutionProvider"])
     feed = {sess.get_inputs()[0].name: x.cpu().numpy()}

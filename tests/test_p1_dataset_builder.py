@@ -122,6 +122,55 @@ class TenClassManualDatasetTests(unittest.TestCase):
             counts=COUNTS, **extra,
         )
 
+    def build_full(self, **extra):
+        return build_dataset(
+            "local-dir", self.output, self.license, self.mapping,
+            annotations=self.ann, images=self.photos, counts=None, full=True,
+            **extra,
+        )
+
+    def test_full_mode_takes_every_valid_sample(self):
+        """--full must not be capped at the 2000/source per-split limit."""
+        result = self.build_full()
+        # Fixture has 3 candidate images per source/split.
+        self.assertEqual(result["by_split"], {"train": 30, "val": 30, "test": 30})
+        manifest = json.loads((self.output / "manifest.aggregate.json").read_text())
+        self.assertEqual(manifest["selection_mode"], "full_available_valid_records")
+
+    def test_full_mode_rejects_quota_or_non_local(self):
+        with self.assertRaises(DatasetBuildError):
+            build_dataset(
+                "local-dir", self.output, self.license, self.mapping,
+                annotations=self.ann, images=self.photos,
+                counts=COUNTS, full=True,
+            )
+        with self.assertRaises(DatasetBuildError):
+            build_dataset(
+                "local-zip", self.output, self.license, self.mapping,
+                annotations=self.annzip, images=self.zips, counts=None, full=True,
+            )
+
+    def test_full_mode_drops_duplicates_without_failing(self):
+        """Duplicate bytes are dropped, and that alone must not abort the build."""
+        source = SOURCES[0]
+        original = next((self.photos / source).glob("*.jpg"))
+        duplicate = self.photos / source / "SYNTHETIC_duplicate.jpg"
+        duplicate.write_bytes(original.read_bytes())
+        doc_path = self.ann / "train" / f"{source}.json"
+        doc = json.loads(doc_path.read_text())
+        doc["SYNTHETIC_duplicate"] = {
+            "user_id": "FICTIONAL_ID_duplicate",
+            "bboxes": [[0.1, 0.15, 0.3, 0.4]],
+            "labels": [source],
+            "united_bbox": None,
+            "united_label": None,
+        }
+        doc_path.write_text(json.dumps(doc))
+        result = self.build_full()
+        self.assertEqual(result["status"], "TEN_CLASS_CANDIDATE_BUILT_PENDING_HUMAN_QA")
+        manifest = json.loads((self.output / "manifest.aggregate.json").read_text())
+        self.assertEqual(manifest["dropped_cross_split_duplicate_bytes"], 1)
+
     def test_offline_plan_keeps_exact_ten_class_contract(self):
         report = offline_plan(COUNTS)
         self.assertEqual(report["requested_images_total"], 40)

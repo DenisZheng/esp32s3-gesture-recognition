@@ -53,13 +53,17 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Dataset manifests retain the original HaGRID source directory names. The
+# model mapping is peace->two and palm->five, but QA must bind to the source
+# directories that actually exist in images/<split>/.
 CLASS_NAMES = (
-    "one", "two", "three", "four", "five", "like", "ok", "no_gesture", "call", "dislike",
+    "one", "peace", "three", "four", "palm", "like", "ok", "no_gesture", "call", "dislike",
 )
 SCHEMA = 1
 MIN_PER_CLASS = 5
 MAX_PER_CLASS = 60
 ACK_NAME = "qa-ack.json"
+ACCEPTANCE_NAME = "p1-acceptance.json"
 
 
 class QAError(ValueError):
@@ -276,6 +280,16 @@ def verify(dataset: Path, workspace: Path, review: Path,
     except ValueError as exc:
         raise QAError("reviewed_on must be an ISO date") from exc
 
+    bulk_attestation = form.get("bulk_attestation")
+    if bulk_attestation is not None:
+        if (
+            not isinstance(bulk_attestation, dict)
+            or bulk_attestation.get("confirmed") is not True
+            or bulk_attestation.get("statement")
+            != "I reviewed every sampled image and all are OK"
+        ):
+            raise QAError("bulk attestation is malformed or not explicitly confirmed")
+
     samples = {s["packet_id"]: s for s in manifest.get("samples", [])}
     decisions = form.get("decisions")
     if not isinstance(decisions, list) or len(decisions) != len(samples):
@@ -306,6 +320,8 @@ def verify(dataset: Path, workspace: Path, review: Path,
             problems.append(f"{pid}:{choice}")
     if seen != set(samples):
         raise QAError("not every sampled image has a decision")
+    if bulk_attestation is not None and problems:
+        raise QAError("bulk all-OK attestation cannot contain rejected samples")
 
     # Re-verify bytes so a swapped image cannot ride on an old signature.
     images = workspace / "images"
@@ -348,6 +364,7 @@ def verify(dataset: Path, workspace: Path, review: Path,
         "per_class_ok": per_class_ok,
         "rejected_samples": problems,
         "human_visual_decode_reviewed": True,
+        "bulk_attestation": bulk_attestation,
         "note": (
             "Records that a human inspected these samples. It does not assert that "
             "the dataset is legally cleared for commercial use."
@@ -434,15 +451,92 @@ def apply_ack(dataset: Path, ack: Path, *, data_root: Path | None = None) -> dic
     priv_path.write_text(
         json.dumps(private, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    acceptance_path = private_ack.parent / ACCEPTANCE_NAME
+    if not acceptance_path.exists():
+        acceptance = {
+            "schema_version": SCHEMA,
+            "dataset_manifest_sha256": _sha256(agg_path),
+            "reviewer": "",
+            "accepted_on": "",
+            "scope": "research_only_training",
+            "accept_research_only_terms": False,
+            "commercial_use": False,
+        }
+        acceptance_path.write_text(
+            json.dumps(acceptance, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        os.chmod(acceptance_path, 0o600)
     return {
         "status": "HUMAN_VISUAL_QA_RECORDED",
         "dataset": str(dataset),
         "human_visual_decode_and_legal_qa_status": "PASS",
         "P1_pass": False,
+        "acceptance_form": str(acceptance_path),
         "remaining_for_P1": [
-            "legal/commercial clearance for model weights and redistribution is unresolved",
-            "formal P1 acceptance is a separate, signed decision",
+            "owner must explicitly accept research-only training scope",
+            "commercial use and redistribution remain prohibited/unresolved",
         ],
+    }
+
+
+def accept_research_only(dataset: Path, acceptance: Path, license_ack: Path,
+                         *, data_root: Path | None = None) -> dict:
+    """Record explicit owner acceptance for research-only training."""
+    from scripts.hagrid_p1 import _approval
+
+    dataset = dataset.resolve()
+    acceptance = _private_dir(acceptance, data_root=data_root)
+    if not acceptance.is_file():
+        raise QAError(f"acceptance form missing: {acceptance}")
+    agg_path = dataset / "manifest.aggregate.json"
+    priv_path = dataset / "manifest.private.json"
+    aggregate = json.loads(agg_path.read_text(encoding="utf-8"))
+    private = json.loads(priv_path.read_text(encoding="utf-8"))
+    form = json.loads(acceptance.read_text(encoding="utf-8"))
+    current = _sha256(agg_path)
+    if form.get("dataset_manifest_sha256") != current:
+        raise QAError("acceptance form references a different dataset manifest")
+    if aggregate.get("human_visual_decode_and_legal_qa_status") not in ("PASS", "APPROVED"):
+        raise QAError("visual QA must be applied before formal training acceptance")
+    reviewer = form.get("reviewer")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise QAError("acceptance reviewer is required")
+    try:
+        date.fromisoformat(str(form.get("accepted_on")))
+    except ValueError as exc:
+        raise QAError("accepted_on must be an ISO date") from exc
+    if form.get("scope") != "research_only_training":
+        raise QAError("only research_only_training scope is permitted")
+    if form.get("accept_research_only_terms") is not True:
+        raise QAError("research-only terms must be explicitly accepted")
+    if form.get("commercial_use") is not False:
+        raise QAError("commercial_use must remain false")
+    _approval(license_ack, "license")
+
+    aggregate["P1_pass"] = True
+    aggregate["legal_clearance_status"] = "RESEARCH_ONLY_TRAINING_ONLY"
+    aggregate["p1_formal_acceptance"] = {
+        "reviewer": reviewer.strip(),
+        "accepted_on": form["accepted_on"],
+        "scope": "research_only_training",
+        "commercial_use": False,
+    }
+    agg_path.write_text(
+        json.dumps(aggregate, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    private["aggregate_sha256"] = hashlib.sha256(
+        json.dumps(aggregate, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    priv_path.write_text(
+        json.dumps(private, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return {
+        "status": "P1_ACCEPTED_FOR_RESEARCH_ONLY_TRAINING",
+        "dataset": str(dataset),
+        "P1_pass": True,
+        "legal_clearance_status": "RESEARCH_ONLY_TRAINING_ONLY",
+        "commercial_use": False,
     }
 
 
@@ -515,6 +609,11 @@ def main() -> None:
     a.add_argument("--dataset", type=Path, required=True)
     a.add_argument("--ack", type=Path, required=True)
 
+    f = sub.add_parser("accept")
+    f.add_argument("--dataset", type=Path, required=True)
+    f.add_argument("--acceptance", type=Path, required=True)
+    f.add_argument("--license-ack", type=Path, required=True)
+
     s = sub.add_parser("status")
     s.add_argument("--dataset", type=Path, required=True)
 
@@ -526,6 +625,10 @@ def main() -> None:
             result = verify(args.dataset, args.workspace, args.review)
         elif args.command == "apply":
             result = apply_ack(args.dataset, args.ack)
+        elif args.command == "accept":
+            result = accept_research_only(
+                args.dataset, args.acceptance, args.license_ack
+            )
         else:
             result = status(args.dataset)
     except QAError as exc:

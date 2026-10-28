@@ -159,7 +159,7 @@ def build_dataset(
     mode: str, output: Path, license_ack: Path, mapping_ack: Path,
     *, annotations: Path | None = None, images: Path | None = None,
     cache: Path | None = None, counts: dict[str, int] | None = None,
-    seed: str = "espdet-p1-05-v1", max_transfer_gib: int = 12,
+    full: bool = False, seed: str = "espdet-p1-05-v1", max_transfer_gib: int = 12,
     max_output_gib: int = 12, prefetch_workers: int = 8,
 ):
     # Important: no user-submitted/official image or JSON reads before gate.
@@ -170,8 +170,14 @@ def build_dataset(
         _approval(mapping_ack, "mapping")
     except PreparationError as exc:
         raise DatasetBuildError("Owner license and all-ten mapping approvals are required") from exc
-    counts = DEFAULT_COUNTS if counts is None else counts
-    _validate_counts(counts)
+    if full:
+        if mode != "local-dir":
+            raise DatasetBuildError("Full mode is only supported for a local directory")
+        if counts is not None:
+            raise DatasetBuildError("Full mode must not receive bounded split quotas")
+    else:
+        counts = DEFAULT_COUNTS if counts is None else counts
+        _validate_counts(counts)
     if mode not in ("local-dir", "local-zip", "auto"):
         raise DatasetBuildError("Choose local-dir, local-zip or auto mode")
     if not isinstance(seed, str) or not 1 <= len(seed) <= 120:
@@ -236,9 +242,13 @@ def build_dataset(
                 )
             for split in SPLITS:
                 for source in SOURCES:
+                    quota = (len(candidates[(split, source)]) if full
+                             else counts[split])
                     selected_count = 0
+                    source_skipped = 0
+                    source_duplicates = 0
                     for _score, stem, _subject, rows in candidates[(split, source)]:
-                        if selected_count >= counts[split]:
+                        if selected_count >= quota:
                             break
                         try:
                             image = im.get(source, stem)
@@ -248,6 +258,7 @@ def build_dataset(
                             # it, keep the failure visible, and let the per-source
                             # quota check below still fail closed if too few landed.
                             skipped_media += 1
+                            source_skipped += 1
                             print(
                                 f"[build] skip {split}/{source}/{stem[:8]}: "
                                 f"{type(exc).__name__}",
@@ -264,6 +275,7 @@ def build_dataset(
                                 # per-source quota check still fails closed if
                                 # too few distinct images remain.
                                 duplicate_across_splits += 1
+                                source_duplicates += 1
                                 print(
                                     f"[build] drop duplicate bytes "
                                     f"{split}/{source}/{stem[:8]} "
@@ -273,6 +285,7 @@ def build_dataset(
                                 continue
                             # Same-frame multi-gesture duplicate: drop within split
                             # rather than poison source class balancing.
+                            source_duplicates += 1
                             continue
                         label = ("\n".join(rows) + "\n").encode("utf-8")
                         output_bytes += len(image) + len(label)
@@ -297,9 +310,12 @@ def build_dataset(
                             "label": str(Path("labels") / rel.with_suffix(".txt")),
                             "label_sha256": hashlib.sha256(label).hexdigest(),
                         })
-                    if selected_count != counts[split]:
+                    if selected_count != quota and (
+                        not full or source_skipped or not source_duplicates
+                    ):
                         raise DatasetBuildError(
-                            "Insufficient licensed, distinct valid images for requested split/source quota"
+                            "Insufficient licensed, distinct valid images for requested "
+                            "split/source quota"
                         )
             aggregate = {
                 "schema_version": SCHEMA,
@@ -314,7 +330,20 @@ def build_dataset(
                 ).hexdigest(),
                 "annotation_file_sha256_private": "See manifest.private.json",
                 "by_split": {s: selected_stats[s] for s in SPLITS},
-                "per_source_split_target": dict(counts),
+                "selection_mode": (
+                    "full_available_valid_records" if full
+                    else "bounded_per_source_quota"
+                ),
+                "per_source_split_target": (
+                    {
+                        split: {
+                            source: len(candidates[(split, source)])
+                            for source in SOURCES
+                        }
+                        for split in SPLITS
+                    }
+                    if full else dict(counts)
+                ),
                 "box_counts": {label: class_boxes[label] for label in CLASS_NAMES},
                 "source_subject_counts": provenance["subjects_by_split"],
                 "invalid_records_by_split": provenance["invalid_annotation_records_by_split"],
@@ -327,6 +356,18 @@ def build_dataset(
                 "P1_pass": False,
                 "P2_training_started": False,
             }
+            dataset_yaml = "path: " + json.dumps(str(dest)) + "\n"
+            dataset_yaml += "train: images/train\nval: images/val\ntest: images/test\n"
+            dataset_yaml += "nc: 10\nnames:\n"
+            dataset_yaml += "".join(f"  {i}: {name}\n" for i, name in enumerate(CLASS_NAMES))
+            # The YAML is part of the dataset contract, not just a pointer: it
+            # fixes class order and split paths. Record its hash in the manifest
+            # so a later edit cannot keep the image/label hashes valid while
+            # silently changing what the model is trained on.
+            aggregate["dataset_yaml_sha256"] = hashlib.sha256(
+                dataset_yaml.encode("utf-8")
+            ).hexdigest()
+            aggregate["class_names_ordered"] = list(CLASS_NAMES)
             private = {
                 "schema_version": SCHEMA,
                 "created_on": date.today().isoformat(),
@@ -343,19 +384,6 @@ def build_dataset(
             (stage / "manifest.private.json").write_text(
                 json.dumps(private, indent=2, sort_keys=True) + "\n", encoding="utf-8"
             )
-            dataset_yaml = "path: " + json.dumps(str(dest)) + "\n"
-            dataset_yaml += "train: images/train\nval: images/val\ntest: images/test\n"
-            dataset_yaml += "nc: 10\nnames:\n"
-            dataset_yaml += "".join(f"  {i}: {name}\n" for i, name in enumerate(CLASS_NAMES))
-            # The YAML is part of the dataset contract, not just a pointer: it
-            # fixes class order and split paths. Record its hash in the manifest
-            # so a later edit cannot keep the image/label hashes valid while
-            # silently changing what the model is trained on.
-            dataset_yaml_sha256 = hashlib.sha256(
-                dataset_yaml.encode("utf-8")
-            ).hexdigest()
-            aggregate["dataset_yaml_sha256"] = dataset_yaml_sha256
-            aggregate["class_names_ordered"] = list(CLASS_NAMES)
             (stage / "dataset.yaml").write_text(dataset_yaml, encoding="utf-8")
             if dest.exists():
                 raise DatasetBuildError("Output directory appeared during build")
@@ -393,7 +421,8 @@ def verify_output(folder: Path) -> dict:
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise DatasetBuildError("Missing/invalid private dataset manifests") from exc
     if (aggregate.get("status") != "TEN_CLASS_CANDIDATE_BUILT_PENDING_HUMAN_QA"
-            or aggregate.get("model_classes") != 10 or aggregate.get("P1_pass") is not False
+            or aggregate.get("model_classes") != 10
+            or aggregate.get("P1_pass") not in (False, True)
             or manifest.get("schema_version") != SCHEMA):
         raise DatasetBuildError("Not a P1-05 candidate dataset")
     calculated = hashlib.sha256(json.dumps(aggregate, sort_keys=True).encode()).hexdigest()
@@ -454,6 +483,8 @@ def main() -> None:
     b.add_argument("--mapping-ack", required=True, type=Path)
     for key, default in DEFAULT_COUNTS.items():
         b.add_argument(f"--{key}-per-source", type=int, default=default)
+    b.add_argument("--full", action="store_true",
+                   help="use every valid image in each source/split; local-dir only")
     b.add_argument("--seed", default="espdet-p1-05-v1")
     b.add_argument("--max-transfer-gib", type=int, default=12)
     b.add_argument("--max-output-gib", type=int, default=12)
@@ -466,15 +497,17 @@ def main() -> None:
         if args.command == "verify":
             out = verify_output(args.output)
         else:
-            counts = {
+            full = getattr(args, "full", False)
+            counts = None if full else {
                 "train": args.train_per_source,
                 "val": args.val_per_source,
                 "test": args.test_per_source,
             }
-            out = offline_plan(counts) if args.command == "plan" else build_dataset(
+            out = offline_plan(counts or DEFAULT_COUNTS) if args.command == "plan" else build_dataset(
                 args.mode, args.output, args.license_ack, args.mapping_ack,
                 annotations=args.annotations, images=args.images, cache=args.cache,
-                counts=counts, seed=args.seed, max_transfer_gib=args.max_transfer_gib,
+                counts=counts, full=full, seed=args.seed,
+                max_transfer_gib=args.max_transfer_gib,
                 max_output_gib=args.max_output_gib,
                 prefetch_workers=args.prefetch_workers,
             )

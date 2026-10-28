@@ -182,6 +182,106 @@ class QAPacketTests(unittest.TestCase):
         self.assertEqual(state["human_visual_decode_and_legal_qa_status"], "PASS")
         self.assertEqual(state["human_visual_qa"]["samples_reviewed"],
                          result["samples_reviewed"])
+        self.assertTrue(Path(applied["acceptance_form"]).is_file())
+
+    def _license(self):
+        path = self.root / "data" / "reviews" / "license.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({
+            "reviewer": "synthetic",
+            "reviewed_on": "2026-10-26",
+            "license_pdf_sha256":
+                "14f4845e9c8d3de875cbac4139491da368ab1040a7f565e02894477279134d22",
+            "permitted_scope": "research_only",
+            "accept_terms": True,
+        }), encoding="utf-8")
+        return path
+
+    def _apply_visual(self, form=None):
+        self._prepare()
+        form = form or self._form()
+        verified = qa.verify(self.dataset, self.workspace, self._write(form),
+                             data_root=self.root / "data")
+        return qa.apply_ack(
+            self.dataset, Path(verified["ack"]), data_root=self.root / "data"
+        )
+
+    def test_bulk_attestation_statement_is_checked(self):
+        self._prepare()
+        form = self._form()
+        form["bulk_attestation"] = {"confirmed": True, "statement": "wrong"}
+        with self.assertRaises(qa.QAError):
+            qa.verify(self.dataset, self.workspace, self._write(form),
+                      data_root=self.root / "data")
+
+    def test_bulk_attestation_cannot_hide_rejected_samples(self):
+        self._prepare()
+        form = self._form()
+        form["bulk_attestation"] = {
+            "confirmed": True,
+            "statement": "I reviewed every sampled image and all are OK",
+        }
+        form["decisions"][0]["decision"] = "bad_box"
+        with self.assertRaises(qa.QAError):
+            qa.verify(self.dataset, self.workspace, self._write(form),
+                      data_root=self.root / "data")
+
+    def test_p1_acceptance_requires_visual_qa_first(self):
+        self._prepare()
+        form = self._form()
+        qa.verify(self.dataset, self.workspace, self._write(form),
+                  data_root=self.root / "data")
+        acceptance = {
+            "schema_version": 1,
+            "dataset_manifest_sha256": qa._sha256(
+                self.dataset / "manifest.aggregate.json"),
+            "reviewer": "synthetic",
+            "accepted_on": "2026-10-26",
+            "scope": "research_only_training",
+            "accept_research_only_terms": True,
+            "commercial_use": False,
+        }
+        early = self.root / "data" / "early.json"
+        early.write_text(json.dumps(acceptance), encoding="utf-8")
+        with self.assertRaises(qa.QAError):
+            qa.accept_research_only(self.dataset, early, self._license(),
+                                    data_root=self.root / "data")
+
+    def test_p1_acceptance_records_research_only_scope(self):
+        applied = self._apply_visual()
+        form_path = Path(applied["acceptance_form"])
+        acceptance = json.loads(form_path.read_text())
+        acceptance.update({
+            "dataset_manifest_sha256": qa._sha256(
+                self.dataset / "manifest.aggregate.json"),
+            "reviewer": "synthetic",
+            "accepted_on": "2026-10-26",
+            "accept_research_only_terms": True,
+        })
+        form_path.write_text(json.dumps(acceptance), encoding="utf-8")
+        result = qa.accept_research_only(
+            self.dataset, form_path, self._license(), data_root=self.root / "data"
+        )
+        self.assertTrue(result["P1_pass"])
+        self.assertEqual(result["legal_clearance_status"], "RESEARCH_ONLY_TRAINING_ONLY")
+        self.assertFalse(result["commercial_use"])
+
+    def test_p1_acceptance_refuses_commercial_use(self):
+        applied = self._apply_visual()
+        form_path = Path(applied["acceptance_form"])
+        acceptance = json.loads(form_path.read_text())
+        acceptance.update({
+            "dataset_manifest_sha256": qa._sha256(
+                self.dataset / "manifest.aggregate.json"),
+            "reviewer": "synthetic",
+            "accepted_on": "2026-10-26",
+            "accept_research_only_terms": True,
+            "commercial_use": True,
+        })
+        form_path.write_text(json.dumps(acceptance), encoding="utf-8")
+        with self.assertRaises(qa.QAError):
+            qa.accept_research_only(self.dataset, form_path, self._license(),
+                                    data_root=self.root / "data")
 
     def test_ack_cannot_be_applied_to_a_different_dataset(self):
         self._prepare()

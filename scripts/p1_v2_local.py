@@ -273,11 +273,13 @@ def build(args) -> int:
             args.mapping_ack,
             annotations=ann_base,
             images=img_base,
-            counts={
+            counts=None if args.full else {
                 "train": args.train_per_source,
                 "val": args.val_per_source,
                 "test": args.test_per_source,
             },
+            full=args.full,
+            max_output_gib=args.max_output_gib,
         )
     except DatasetBuildError as exc:
         log(f"BUILD FAILED: {exc}")
@@ -333,9 +335,12 @@ def main() -> None:
                     default=Path("data/reviews/hagrid-license-ack.json"))
     bd.add_argument("--mapping-ack", type=Path,
                     default=Path("data/reviews/hagrid-mapping-ack.json"))
+    bd.add_argument("--full", action="store_true",
+                    help="use every valid image in each original split/source")
     bd.add_argument("--train-per-source", type=int, default=2000)
     bd.add_argument("--val-per-source", type=int, default=200)
     bd.add_argument("--test-per-source", type=int, default=200)
+    bd.add_argument("--max-output-gib", type=int, default=60)
 
     args = ap.parse_args()
     try:

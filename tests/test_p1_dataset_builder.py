@@ -150,13 +150,13 @@ class TenClassManualDatasetTests(unittest.TestCase):
                 annotations=self.annzip, images=self.zips, counts=None, full=True,
             )
 
-    def test_full_mode_drops_duplicates_without_failing(self):
-        """Duplicate bytes are dropped, and that alone must not abort the build."""
+    def test_full_mode_drops_cross_split_duplicate_without_failing(self):
+        """Cross-split duplicate bytes are dropped without aborting the build."""
         source = SOURCES[0]
-        original = next((self.photos / source).glob("*.jpg"))
+        original = self.photos / source / f"SYNTHETIC_train_{source}_0.jpg"
         duplicate = self.photos / source / "SYNTHETIC_duplicate.jpg"
         duplicate.write_bytes(original.read_bytes())
-        doc_path = self.ann / "train" / f"{source}.json"
+        doc_path = self.ann / "val" / f"{source}.json"
         doc = json.loads(doc_path.read_text())
         doc["SYNTHETIC_duplicate"] = {
             "user_id": "FICTIONAL_ID_duplicate",

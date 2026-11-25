@@ -1,0 +1,86 @@
+--- a/ultralytics/data/utils.py
++++ b/ultralytics/data/utils.py
+@@ -779,10 +779,14 @@
+     """Load an Ultralytics *.cache dictionary from path."""
+     import gc
+ 
+-    gc.disable()  # reduce pickle load time https://github.com/ultralytics/ultralytics/pull/1585
+-    cache = np.load(str(path), allow_pickle=True).item()  # load dict
+-    gc.enable()
+-    return cache
++    gc_was_enabled = gc.isenabled()
++    if gc_was_enabled:
++        gc.disable()  # reduce pickle load time https://github.com/ultralytics/ultralytics/pull/1585
++    try:
++        return np.load(str(path), allow_pickle=True).item()  # load dict
++    finally:
++        if gc_was_enabled:
++            gc.enable()
+ 
+ 
+ def save_dataset_cache_file(prefix: str, path: Path, x: dict, version: str):
+--- a/ultralytics/data/build.py
++++ b/ultralytics/data/build.py
+@@ -89,6 +89,7 @@
+ 
+     def reset(self):
+         """Reset the iterator to allow modifications to the dataset during training."""
++        close_dataloader(self)
+         self.iterator = self._get_iterator()
+ 
+ 
+@@ -291,7 +292,10 @@
+     rank: int = -1,
+     drop_last: bool = False,
+     pin_memory: bool = True,
+-) -> InfiniteDataLoader:
++    prefetch_factor: int | None = None,
++    persistent_workers: bool = True,
++    infinite: bool = True,
++) -> InfiniteDataLoader | dataloader.DataLoader:
+     """Create and return an InfiniteDataLoader or DataLoader for training or validation.
+ 
+     Args:
+@@ -323,19 +327,40 @@
+     )
+     generator = torch.Generator()
+     generator.manual_seed(6148914691236517205 + RANK)
+-    return InfiniteDataLoader(
++    # 移植 #26057：默认验证预取减半；项目入口可独立覆盖。
++    prefetch = (
++        prefetch_factor if prefetch_factor is not None else (4 if shuffle else 2)
++    ) if nw > 0 else None
++    loader_cls = InfiniteDataLoader if infinite else dataloader.DataLoader
++    return loader_cls(
+         dataset=dataset,
+         batch_size=batch,
+         shuffle=shuffle and sampler is None,
+         num_workers=nw,
+         sampler=sampler,
+-        prefetch_factor=4 if nw > 0 else None,  # increase over default 2
++        prefetch_factor=prefetch,
++        persistent_workers=persistent_workers and nw > 0,
+         pin_memory=nd > 0 and pin_memory,
+         collate_fn=getattr(dataset, "collate_fn", None),
+         worker_init_fn=seed_worker,
+         generator=generator,
+         drop_last=drop_last and len(dataset) % batch != 0,
+     )
++
++
++def close_dataloader(loader) -> None:
++    """释放持久加载器的迭代器和 worker。"""
++    iterator = getattr(loader, "iterator", None)
++    if iterator is None:
++        iterator = getattr(loader, "_iterator", None)
++    if iterator is None:
++        return
++    if loader.num_workers:
++        iterator._shutdown_workers()
++    if hasattr(loader, "iterator"):
++        loader.iterator = None
++    if hasattr(loader, "_iterator"):
++        loader._iterator = None
+ 
+ 
+ def check_source(

@@ -1,4 +1,5 @@
 # Private / third-party data and generated datasets
+/_review-local/
 /data/*
 !/data/README.md
 /external/

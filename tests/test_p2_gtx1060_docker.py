@@ -79,8 +79,9 @@ class DockerHostScaffoldingTests(unittest.TestCase):
         if not bash:
             self.skipTest("Bash not installed on this offline test host")
         path = ROOT / "scripts/p2_docker_host.sh"
+        script_arg = path.relative_to(ROOT).as_posix()
         result = subprocess.run(
-            [bash, "-n", str(path)], capture_output=True, text=True, check=False
+            [bash, "-n", script_arg], cwd=ROOT, capture_output=True, text=True, check=False
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -114,7 +115,9 @@ class DockerHostScaffoldingTests(unittest.TestCase):
         contents = (ROOT / ".dockerignore").read_text(encoding="utf-8")
         active = [x.strip() for x in contents.splitlines() if x.strip() and not x.lstrip().startswith("#")]
         self.assertEqual(active[0], "*")
-        self.assertEqual(active, ["*", "!requirements/", "!requirements/p2-candidate-constraints.txt"])
+        self.assertEqual(active, ["*", "!requirements/", "!requirements/p2-candidate-constraints.txt",
+                                  "!patches/", "!patches/ultralytics-8.4.0.patch",
+                                  "!scripts/", "!scripts/apply_ultralytics_patch.py"])
         self.assertIn("!requirements/p2-candidate-constraints.txt", contents)
         self.assertNotIn("!data/", contents)
         self.assertNotIn("!external/", contents)

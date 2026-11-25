@@ -25,5 +25,10 @@ RUN python -c "import sys,torch,torchvision; assert sys.version_info[:2]==(3,10)
     && python -m pip check \
     && python -c "import torch,torchvision,numpy,cv2,ultralytics; assert torch.__version__.split('+')[0]=='2.2.0'; assert torchvision.__version__.split('+')[0]=='0.17.0'; assert torch.version.cuda=='12.1'; assert numpy.__version__=='1.24.4'; assert cv2.__version__=='4.11.0'; assert ultralytics.__version__=='8.4.0'"
 
+# 仅复制公共补丁及应用器，不把训练图片、私有签核或 checkpoint 打进镜像。
+COPY patches/ultralytics-8.4.0.patch /opt/p2/patches/ultralytics-8.4.0.patch
+COPY scripts/apply_ultralytics_patch.py /opt/p2/scripts/apply_ultralytics_patch.py
+RUN python /opt/p2/scripts/apply_ultralytics_patch.py
+
 # No source/image/checkpoint COPY; runtime mounts an ignored local repo.
 CMD ["python", "-m", "scripts.p2_host_doctor", "plan"]

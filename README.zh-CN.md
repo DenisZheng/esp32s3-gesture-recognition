@@ -2,7 +2,7 @@
 
 本仓库独立管理 **ESPDet-Pico + HaGRIDv2 -> 自主训练 -> ONNX -> ESP-PPQ -> ESP-DL -> M5Stack CoreS3** 的研究 PoC。
 
-**当前阶段：P0 GitHub 基础设施已完成**：Public 仓库、GitHub Actions 和 Active 的 `Protect main` 规则已核实。许可 PDF 全文已审阅并锁定 SHA256；实际使用许可确认与十类视觉映射仍待人工签核。**P1 数据工具已通过合成单测，真实 HaGRID 数据处理暂受许可确认阻断。**没有训练、量化或真实板卡验收证据。
+**最近一次已知快照（2026-11-25 14:26，UTC+8）：** RTX 4080 上新的 200 轮十类 ESPDet-Pico scratch 训练已完成 120 轮，第 121 轮约完成 18%；该快照之后的状态尚未核实。完整数据集为 train/val/test 208,764 / 27,187 / 45,418 张，文件校验和原研究用途/抽样视觉签核核对通过。Ultralytics 保留 8.4.0 并应用 GC/预取补丁；本轮实参为 train/val workers=2/0，本地后续新启动默认调整为4/2。长期 OOM 稳定性、完整训练、独立评估、量化和板卡验收仍未完成。训练快照、补丁来源与验证边界见 [P2 OOM 修复与训练状态](docs/P2_OOM_FIX_2026_11_24.md)。
 
 本项目的**应用目标是手势识别**，采用**一个 ESPDet-Pico 目标检测网络**同时预测手部 Bounding Box、置信度和下列十类（不是检测+分类两个模型）：`one, two, three, four, five, like, ok, no_gesture, call, dislike`。`no_gesture` 是有手部检测框的非命令手势，`no_hand` 不是第十一类。
 
@@ -30,6 +30,10 @@ P1 数据审计与微样本转换用法：[docs/P1_DATA_TOOLING.md](docs/P1_DATA
 
 HaGRIDv2 使用自行改写的许可，**不是标准 CC BY-SA 4.0**。详见 [完整许可审查记录](docs/HAGRID_LICENSE_AUDIT.md)。
 
+
+## 2026-10-21 历史工具说明
+
+以下条目中的“尚未签核/未训练”保留早期开发范围，不覆盖页首的 2026-11-24 当前状态。现行映射为 `peace -> two`、`palm -> five`，签核仅限研究训练。
 
 ## P1 数据筛选补充
 

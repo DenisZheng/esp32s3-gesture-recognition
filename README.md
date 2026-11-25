@@ -2,7 +2,7 @@
 
 **Research PoC | Single-model ten-class hand gesture recognition with localization | M5Stack CoreS3**
 
-> **Project status: GitHub P0 infrastructure COMPLETE; HaGRID custom PDF source has been read and pinned, but owner/legal usage acceptance and 10-class visual signoff remain pending. P1 selective metadata tools are synthetic-tested; no private data or real training is claimed.** The repository contains audited technical design, source pins, data-policy safeguards, offline contract tests, and CI configuration. It **does not** contain a trained model, data, a firmware image, or real-device results.
+> **Last verified snapshot (2026-11-25 14:26 UTC+8):** The new 200-epoch scratch run on an RTX 4080 had completed 120 epochs; epoch 121 was about 18% complete. The later run state has not been checked. This run explicitly uses train/val workers=2/0; local CLI defaults for future runs are 4/2 (prefetch=2/1). The Ultralytics 8.4.0 GC/prefetch patch is applied and research-only data approval was checked. Neither this snapshot nor the default change proves long-run OOM stability, final accuracy, or deployment readiness. See [P2 OOM fix and training status](docs/P2_OOM_FIX_2026_11_24.md) for details. Dataset images, weights, and private approvals stay out of Git.
 
 [中文说明](README.zh-CN.md) | [Implementation plan](docs/PLAN.md) | [Technical architecture](docs/ARCHITECTURE.md) | [Upstream compatibility](docs/UPSTREAM_COMPATIBILITY.md) | [CoreS3 board baseline](docs/BOARD_BASELINE.md) | [Input size decision](docs/INPUT_RESOLUTION.md) | [Licenses](docs/THIRD_PARTY.md) | [P1 data tooling](docs/P1_DATA_TOOLING.md) | [Custom dataset license review](docs/HAGRID_LICENSE_AUDIT.md)
 
@@ -17,7 +17,7 @@ One *self-trained* ESPDet-Pico **gesture-recognition network built on a detectio
 | ID | Label | HaGRID candidate | Mapping status |
 |---:|---|---|---|
 | 0 | one | one | Pending visual sample audit |
-| 1 | two | two_up | **Pending visual confirmation** |
+| 1 | two | peace | Research-training mapping approved; see the current status record |
 | 2 | three | three | Pending visual sample audit |
 | 3 | four | four | Pending visual sample audit |
 | 4 | five | palm | **Pending visual confirmation** |
@@ -66,9 +66,9 @@ GitHub repo and `Protect main` ruleset are active; use feature branches and PRs 
 
 | Stage | Goal | Current status |
 |---|---|---|
-| P0 | Repository, compatibility audit, plan, CI | GitHub/CI/ruleset **DONE**; license review and mapping visual signoff pending |
-| P1 | Audited HaGRID sample conversion | **PARTIAL**: offline metadata/converter scripts + synthetic CI; real licensed data and mapping pending |
-| P2 | Reproducible scratch training / FP32 eval | PENDING |
+| P0 | Repository, compatibility audit, plan, CI | Infrastructure has a historical completion record; research-only data approval and mapping were checked for this run. Commercial use is not cleared. |
+| P1 | Audited HaGRID sample conversion | Checksums for 281,369 images/labels and the original 240-image review were verified for this research-training scope. |
+| P2 | Reproducible scratch training / FP32 eval | RUNNING: new 200-epoch RTX 4080 run; full training, independent FP32 evaluation, and long-run OOM validation remain incomplete. |
 | P3 | ONNX parity / W8A8 ESP-PPQ eval | PENDING |
 | P4 | CoreS3 fixed image + live camera | PENDING |
 | P5 | Compare one-model vs official two-model pipeline | PENDING |
@@ -76,11 +76,15 @@ GitHub repo and `Protect main` ruleset are active; use feature branches and PRs 
 See [Acceptance](docs/ACCEPTANCE.md) for exact evidence definitions.
 
 
+## Historical tooling notes (2026-10-21)
+
+The following P1/P2-00 sections preserve the scope and status of the earlier tooling work. Statements that training or sign-off was pending refer to that historical snapshot; see the 2026-11-24 P2 status linked above for the current run.
+
 ## P1 source selection — important distinction
 
 The pinned HaGRIDv2 corpus has **34 original sources** (33 gesture categories plus no_gesture), but our single ESPDet-Pico model still has **10 output classes at 224x224**. Remaining classes must **not all become negatives**. The [review-only source policy](docs/HARD_NEGATIVES.md) partitions extra sources into seven single-hand candidates requiring signed licensed-image approval, ten confusing lookalikes held out, and seven compound two-hand sources held out.
 
-**Provisional mapping risk:** ESP-DL `two` looks like a V sign while HaGRID `two_up` shows closer fingers; HaGRID `peace` may be a better match and must NOT be trained as class-7 `no_gesture` without semantic adjudication. No real visual mapping approval or training experiment is claimed.
+**Mapping note:** The approved research-training source for `two` is HaGRID `peace`, not `two_up`; `peace` is not used as class-7 `no_gesture`. Any new source still requires separate visual and license review.
 
 
 For P1-03 class-adjudication evidence, see the [private HTML visual mapping review workflow](docs/P1_VISUAL_REVIEW.md). The tool uses only licensed train images, never downloads photos or views held-out test images, and cannot replace owner/legal acceptance or human signoff.

@@ -280,7 +280,11 @@ def assert_scratch(net) -> int:
 
 
 def _common_kwargs(args) -> dict:
+    from scripts.p2_loaders import make_trainer
+
     return dict(
+        trainer=make_trainer(args),
+        cache=False,
         data=str(args.data),
         imgsz=args.imgsz,
         batch=args.batch,
@@ -469,6 +473,9 @@ def run_train(args) -> dict:
             "epochs": args.epochs,
             "batch": args.batch,
             "workers": args.workers,
+            "val_workers": args.val_workers,
+            "prefetch_factor": args.prefetch_factor,
+            "val_prefetch_factor": args.val_prefetch_factor,
             "optimizer": args.optimizer,
             "lr0": args.lr0,
             "lrf": args.lrf,
@@ -531,11 +538,16 @@ def run_eval(args) -> dict:
         "environment": environment_snapshot(),
         **dataset,
     }
+    from scripts.p2_loaders import make_validator
+
     started = time.time()
     metrics = model.val(
+        validator=make_validator(args, standalone=True),
         data=str(args.data),
         imgsz=args.imgsz,
         batch=args.batch,
+        workers=args.workers,
+        cache=False,
         device=args.device,
         split=args.split,
         plots=False,
@@ -577,7 +589,10 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--data", type=Path, required=True, help="P1-approved dataset.yaml")
         p.add_argument("--imgsz", type=int, default=224)
         p.add_argument("--batch", type=int, default=8)
-        p.add_argument("--workers", type=int, default=4)
+        p.add_argument("--workers", type=int, default=4, help="训练/独立 eval 加载进程数")
+        p.add_argument("--val-workers", type=int, default=2, help="训练期间验证加载进程数")
+        p.add_argument("--prefetch-factor", type=int, default=2, help="训练/独立 eval 每进程预取批数")
+        p.add_argument("--val-prefetch-factor", type=int, default=1, help="验证每进程预取批数；0 worker 时忽略")
         p.add_argument("--device", default="0")
         p.add_argument("--seed", type=int, default=20261022)
         p.add_argument("--amp", action="store_true", help="Off by default: FP32 baseline")
@@ -612,6 +627,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.workers < 0 or args.val_workers < 0:
+        raise SystemExit("workers 和 val-workers 不能为负数")
+    if args.prefetch_factor < 1 or args.val_prefetch_factor < 1:
+        raise SystemExit("prefetch-factor 必须至少为 1")
     if os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
         raise SystemExit("BLOCKED: real training is forbidden in CI")
     try:

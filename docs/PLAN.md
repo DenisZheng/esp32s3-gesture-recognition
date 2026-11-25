@@ -2,9 +2,11 @@
 
 Date: 2026-10-20. **Goal: single-model hand gesture recognition with localization.** Project: `DenisZheng/esp32s3-gesture-recognition`. Baseline: CoreS3 / ESP32-S3 / 8MB PSRAM / IDF 5.4.4 / ESP-DL v3.3.14. Stage gate is sequential: do not enter the next phase until the previous stage has a signed, evidence-backed PASS. An outcome is `DONE` only with artifact, command, version and result. `PENDING` is neither PASS nor FAIL.
 
-**Current P0 outcome: GITHUB INFRASTRUCTURE DONE; RESEARCH GATE PARTIAL.** Public repository, real GitHub commits, green Actions and active main Ruleset `Protect main` (PR + `p0-contract`) were verified via GitHub API on 2026-10-20. The owner's Public-visibility choice supersedes the original Private-repo suggestion. HaGRID custom PDF text is now source-reviewed with a verified SHA256, but owner usage acceptance, class visual signoff and actual sample evidence are still pending. P1 metadata/converter tooling can proceed independently without datasets; P2 training cannot begin until licensed P1 acceptance.
+**最近一次已知快照（2026-11-25 14:26，UTC+8）：** P1 研究用途数据门禁已核对；P2 的 200 轮 scratch 训练已完成 120 轮，第 121 轮约完成 18%。该快照之后的状态尚未核实。P2 整体未 PASS，P3/P4/P5 待验收。训练使用随机权重、独立 OOM 修复镜像及启动时明确指定的 2/0 workers。训练快照和验证边界见 [P2 OOM 修复与训练状态](P2_OOM_FIX_2026_11_24.md)。不因启动或中途快照声称长期 OOM 已解决，也不把研究训练许可当成商业许可。
 
-## P0 — Repository and feasibility (current)
+以下 P0/P1 条目及带日期的实现记录保留最初阶段门和历史状态；其“BLOCKED/PENDING”不能替代上述本轮实机进展。
+
+## P0 — Repository and feasibility（初始阶段记录）
 
 | ID | Task | Exit evidence | Status |
 |---|---|---|---|
@@ -24,7 +26,7 @@ Date: 2026-10-20. **Goal: single-model hand gesture recognition with localizatio
 
 The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git SHA. Before upgrading again, file a compatibility-review PR against the updated upstream release. Training and image-shape selection remain experimental; [224x224 rationale](INPUT_RESOLUTION.md) is reviewed at P0, not yet validated on device.
 
-## P1 — HaGRIDv2 minimal dataset PoC (TOOLING PARTIAL; real data BLOCKED)
+## P1 — HaGRIDv2 minimal dataset PoC（初始工具与阶段要求；本轮数据状态见页首）
 
 1. **P1-01 License/provenance:** read `license/en_us.pdf` and record permitted research/redistribution/model usage; keep private annotation and subject data; record HaGRIDv2 `Hagrid_v2-1M` source branch and annotation archive version/hash, never assume git SHA identifies downloaded dataset bytes.
 2. **P1-02 Counts/metadata:** download *annotation metadata only if access permits*; inspect split JSON schema, `user_id`, per-hand `bboxes` and `labels`, `united_bbox`/`united_label`. Make counts by source class, distinct user_id, multi-hand cases, `no_gesture`, unreadable media. Generate metadata-only manifest (local, ignored).
@@ -37,7 +39,7 @@ The frozen start-of-P0 latest stable ESP-DL release is v3.3.14, with a full Git 
 
 **P1 tooling (PR #1, followed by license and selective ZIP tooling):** `scripts/hagrid_p1.py`, `tests/test_hagrid_p1.py` and [P1 data runbook](P1_DATA_TOOLING.md) implement offline synthetic-tested metadata audit + guarded micro-sampling. No real HaGRID bytes were acquired. **P1 PASS remains blocked** by exact license PDF, signed visual mapping, real data and private visual QA. See runbook for restrictions and evidence. No mAP required yet.
 
-## P2 — Scratch PyTorch training (PENDING)
+## P2 — Scratch PyTorch training（RUNNING；完整训练与 FP32 验收未完成）
 
 - **P2-01** Verify pinned ESP-Detection and test `nc=10` graph construction / gradient step with resolved Ultralytics+Torch versions. Train from *random initialization*, no secret/implicit pretrained checkpoints. Record source snapshots and `pip freeze`.
 - **P2-02** Configure `224x224`, random seed, optimizer, schedule, epochs, augmentation, batch, data split, resize/letterbox. Validate that any transfer/rect config is intentional. Create one reproducible command and experiment ID.
